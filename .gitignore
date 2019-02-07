@@ -1,6 +1,7 @@
-.idea
-.git
-out
+.idea/
+.git/
+out/
+artifacts/
 java-2019.iml
 
 __Test__*
