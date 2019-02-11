@@ -7,7 +7,7 @@ import java.io.*;
  * @date 06-Feb-2019
  */
 
-class Hash {
+class Utils {
 
     private static final int FNV_PRIME = 0x01000193;
     private static final int FNV_X0 = 0x811c9dc5;
@@ -26,6 +26,10 @@ class Hash {
             hash = (hash * FNV_PRIME) ^ b;
         }
         return hash;
+    }
+
+    static String escape(String fileName) {
+        return fileName.replace("\\", "\\\\");
     }
 
 }

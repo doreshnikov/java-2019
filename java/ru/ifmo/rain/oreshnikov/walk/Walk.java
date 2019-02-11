@@ -5,6 +5,8 @@ import net.java.quickcheck.collection.Pair;
 import java.io.*;
 import java.util.List;
 
+import ru.ifmo.rain.oreshnikov.walk.Utils;
+
 /**
  * @author doreshnikov
  * @date 06-Feb-2019
@@ -22,7 +24,7 @@ public class Walk extends Walker {
             return;
         }
 
-        Pair<List<String>, PrintStream> arguments = Walker.parseArguments(args[0], args[1]);
+        Pair<List<String>, OutputStreamWriter> arguments = Walker.parseArguments(args[0], args[1]);
         Walk walk = new Walk();
         if (arguments != null) {
             walk.run(arguments.getFirst(), arguments.getSecond());
@@ -30,19 +32,23 @@ public class Walk extends Walker {
     }
 
     @Override
-    public void doHash(File file, PrintStream stream) {
+    public void doHash(File file, OutputStreamWriter writer) {
         int hash = 0;
         if (file.isFile()) {
             try {
-                hash = Hash.doHash(file);
+                hash = Utils.doHash(file);
             } catch (IOException e) {
                 System.err.println(e.toString());
             }
         } else {
-            System.err.printf("File %s is missing\n", file.getPath());
+            System.err.printf("File %s is missing\n", Utils.escape(file.getPath()));
         }
 
-        stream.printf("%08x %s\n", hash, file.getPath());
+        try {
+            writer.write(String.format("%08x %s\n", hash, Utils.escape(file.getPath())));
+        } catch (IOException e) {
+            System.err.println("Something went wrong while writing to file");
+        }
     }
 
 }

@@ -25,7 +25,7 @@ public class RecursiveWalk extends Walker {
             return;
         }
 
-        Pair<List<String>, PrintStream> arguments = Walker.parseArguments(args[0], args[1]);
+        Pair<List<String>, OutputStreamWriter> arguments = Walker.parseArguments(args[0], args[1]);
         RecursiveWalk recursiveWalk = new RecursiveWalk();
         if (arguments != null) {
             recursiveWalk.run(arguments.getFirst(), arguments.getSecond());
@@ -33,7 +33,7 @@ public class RecursiveWalk extends Walker {
     }
 
     @Override
-    public void doHash(File dir, PrintStream stream) {
+    public void doHash(File dir, OutputStreamWriter stream) {
         File[] fileList = new File[0];
         if (dir.isDirectory() && (fileList = dir.listFiles()) != null) {
             for (File file : fileList) {

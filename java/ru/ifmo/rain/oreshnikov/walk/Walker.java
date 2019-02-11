@@ -5,6 +5,7 @@ import net.java.quickcheck.collection.Pair;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -15,32 +16,37 @@ import java.util.List;
 
 abstract class Walker {
 
-    protected static Pair<List<String>, PrintStream> parseArguments(String inputFile, String outputFile) {
-        List<String> paths;
+    protected static Pair<List<String>, OutputStreamWriter> parseArguments(String inputFile, String outputFile) {
+        OutputStreamWriter writer;
         try {
-            paths = Files.readAllLines(Path.of(inputFile), Charset.forName("utf-8"));
-        } catch (IOException e) {
-            System.err.println(e.toString());
-            return null;
-        }
-
-        PrintStream printStream;
-        try {
-            printStream = new PrintStream(new FileOutputStream(outputFile));
+            writer = new OutputStreamWriter(new FileOutputStream(outputFile), Charset.forName("utf-8"));
         } catch (FileNotFoundException e) {
             System.err.println(e.toString());
             return null;
         }
 
-        return new Pair<>(paths, printStream);
+        List<String> paths;
+        try {
+            paths = Files.readAllLines(Path.of(inputFile), Charset.forName("utf-8"));
+        } catch (InvalidPathException | IOException e) {
+            System.err.println(e.toString());
+            return null;
+        }
+
+        return new Pair<>(paths, writer);
     }
 
-    protected void run(List<String> paths, PrintStream stream) {
+    protected void run(List<String> paths, OutputStreamWriter writer) {
         for (String path : paths) {
-            doHash(new File(path), stream);
+            doHash(new File(path), writer);
+        }
+        try {
+            writer.close();
+        } catch (IOException e) {
+            System.err.println("Something went wrong while closing the file");
         }
     }
 
-    protected abstract void doHash(File path, PrintStream stream);
+    protected abstract void doHash(File path, OutputStreamWriter stream);
 
 }
