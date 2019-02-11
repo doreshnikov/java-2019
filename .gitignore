@@ -1,10 +1,10 @@
 .idea/
 .git/
 out/
-artifacts/
 java-2019.iml
 
 __Test__*
 
 *.class
 *.output
+README.md
