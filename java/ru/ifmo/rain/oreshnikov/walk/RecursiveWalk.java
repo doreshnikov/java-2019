@@ -1,7 +1,9 @@
 package ru.ifmo.rain.oreshnikov.walk;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.nio.file.Paths;
 
 /**
@@ -12,13 +14,13 @@ import java.nio.file.Paths;
 public class RecursiveWalk extends Walker {
 
     private static final String USAGE_TIP =
-            "Usage: java RecursiveWalk <input> <output>\nwhere <input> points to a text file with paths list";
+            "Expected usage: java RecursiveWalk <input> <output>\nwhere <input> points to a text file with paths list";
     private static final Walk WALK =
             new Walk();
 
     public static void main(String[] args) {
-        if (args.length != 2) {
-            System.out.println("Invalid arguments amount");
+        if (args == null || args.length != 2 || args[0] == null || args[1] == null) {
+            System.out.println("Invalid arguments number");
             System.out.println(USAGE_TIP);
             return;
         }
@@ -30,7 +32,10 @@ public class RecursiveWalk extends Walker {
     }
 
     @Override
-    public void doHash(String dirPath, OutputStreamWriter writer) throws WalkerException {
+    public void doHash(String dirPath, Writer writer) throws WalkerException {
+        if (dirPath == null || writer == null) {
+            throw new WalkerException("Expected not-null arguments");
+        }
         File dir = new File(dirPath);
 
         String[] subPathList = new String[0];

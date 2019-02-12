@@ -1,8 +1,6 @@
 package ru.ifmo.rain.oreshnikov.walk;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
+import java.io.*;
 
 /**
  * @author doreshnikov
@@ -12,23 +10,27 @@ import java.io.OutputStreamWriter;
 public class Walk extends Walker {
 
     private static final String USAGE_TIP =
-            "Usage: java Walk <input> <output>\nwhere <input> points to a text file with paths list";
+            "Expected usage: java Walk <input> <output>\nwhere <input> points to a text file with paths list";
+    public static final Walk WALK = new Walk();
 
     public static void main(String[] args) {
-        if (args.length != 2) {
-            System.out.println("Invalid arguments amount");
+        if (args == null || args.length != 2 || args[0] == null || args[1] == null) {
+            System.out.println("Invalid arguments number");
             System.out.println(USAGE_TIP);
             return;
         }
         try {
-            new Walk().run(args[0], args[1]);
+            WALK.run(args[0], args[1]);
         } catch (WalkerException e) {
             System.err.println(e.getMessage());
         }
     }
 
     @Override
-    public void doHash(String filePath, OutputStreamWriter writer) throws WalkerException {
+    public void doHash(String filePath, Writer writer) throws WalkerException {
+        if (filePath == null || writer == null) {
+            throw new WalkerException("Expected not-null arguments");
+        }
         File file = new File(filePath);
 
         int hash = 0;
