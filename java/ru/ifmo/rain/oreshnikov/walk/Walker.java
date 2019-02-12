@@ -16,37 +16,31 @@ import java.util.List;
 
 abstract class Walker {
 
-    protected static Pair<List<String>, OutputStreamWriter> parseArguments(String inputFile, String outputFile) {
+    protected void run(String inputFilePath, String outputFilePath) throws WalkerException {
         List<String> paths;
         try {
-            paths = Files.readAllLines(Path.of(inputFile), Charset.forName("utf-8"));
+            paths = Files.readAllLines(Path.of(inputFilePath), Charset.forName("utf-8"));
         } catch (InvalidPathException | IOException e) {
-            System.err.println(e.toString());
-            return null;
+            throw new WalkerException("Can not read given input file: " + e.getMessage());
         }
 
         OutputStreamWriter writer;
         try {
-            writer = new OutputStreamWriter(new FileOutputStream(outputFile), Charset.forName("utf-8"));
+            writer = new OutputStreamWriter(new FileOutputStream(outputFilePath), Charset.forName("utf-8"));
         } catch (FileNotFoundException e) {
-            System.err.println(e.toString());
-            return null;
+            throw new WalkerException("Can not open file to write to: " + e.getMessage());
         }
 
-        return new Pair<>(paths, writer);
-    }
-
-    protected void run(List<String> paths, OutputStreamWriter writer) {
         for (String path : paths) {
             doHash(path, writer);
         }
         try {
             writer.close();
         } catch (IOException e) {
-            System.err.println("Something went wrong while closing the file");
+            throw new WalkerException("Can not close output stream: " + e.getMessage());
         }
     }
 
-    protected abstract void doHash(String path, OutputStreamWriter writer);
+    protected abstract void doHash(String path, OutputStreamWriter writer) throws WalkerException;
 
 }

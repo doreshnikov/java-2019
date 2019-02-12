@@ -15,7 +15,7 @@ import java.util.List;
 public class RecursiveWalk extends Walker {
 
     private static final String USAGE_TIP =
-            "Usage: java Walk <input> <output>\nwhere <input> points to a text file with paths list";
+            "Usage: java RecursiveWalk <input> <output>\nwhere <input> points to a text file with paths list";
     private static final Walk WALK =
             new Walk();
 
@@ -25,16 +25,15 @@ public class RecursiveWalk extends Walker {
             System.out.println(USAGE_TIP);
             return;
         }
-
-        Pair<List<String>, OutputStreamWriter> arguments = Walker.parseArguments(args[0], args[1]);
-        RecursiveWalk recursiveWalk = new RecursiveWalk();
-        if (arguments != null) {
-            recursiveWalk.run(arguments.getFirst(), arguments.getSecond());
+        try {
+            new RecursiveWalk().run(args[0], args[1]);
+        } catch (WalkerException e) {
+            System.err.println(e.getMessage());
         }
     }
 
     @Override
-    public void doHash(String dirPath, OutputStreamWriter writer) {
+    public void doHash(String dirPath, OutputStreamWriter writer) throws WalkerException {
         File dir = new File(dirPath);
 
         String[] subPathList = new String[0];

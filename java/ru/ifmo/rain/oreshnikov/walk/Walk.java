@@ -1,11 +1,8 @@
 package ru.ifmo.rain.oreshnikov.walk;
 
-import net.java.quickcheck.collection.Pair;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.util.List;
 
 /**
  * @author doreshnikov
@@ -23,23 +20,22 @@ public class Walk extends Walker {
             System.out.println(USAGE_TIP);
             return;
         }
-
-        Pair<List<String>, OutputStreamWriter> arguments = Walker.parseArguments(args[0], args[1]);
-        Walk walk = new Walk();
-        if (arguments != null) {
-            walk.run(arguments.getFirst(), arguments.getSecond());
+        try {
+            new Walk().run(args[0], args[1]);
+        } catch (WalkerException e) {
+            System.err.println(e.getMessage());
         }
     }
 
     @Override
-    public void doHash(String filePath, OutputStreamWriter writer) {
+    public void doHash(String filePath, OutputStreamWriter writer) throws WalkerException {
         File file = new File(filePath);
 
         int hash = 0;
         if (file.isFile()) {
             try {
-                hash = Utils.doHash(file);
-            } catch (IOException e) {
+                hash = Hasher.doHash(file);
+            } catch (HasherException e) {
                 System.err.println(e.toString());
             }
         } else {
@@ -49,7 +45,7 @@ public class Walk extends Walker {
         try {
             writer.append(String.format("%08x ", hash)).append(filePath).append('\n');
         } catch (IOException e) {
-            System.err.println("Something went wrong while writing to file");
+            throw new WalkerException("Something went wrong while writing to file: " + e.getMessage());
         }
     }
 
