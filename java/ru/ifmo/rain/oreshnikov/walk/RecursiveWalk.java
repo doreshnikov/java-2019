@@ -47,7 +47,11 @@ public class RecursiveWalk extends Walker {
             if (subPathList == null) {
                 System.err.println("Something went wrong while iterating over directory");
             }
-            WALK.doHash(dirPath, writer);
+            try {
+                WALK.doHash(dirPath, writer);
+            } catch (WalkerException e) {
+                System.err.println(e.getMessage());
+            }
         }
     }
 
