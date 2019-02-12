@@ -33,17 +33,19 @@ public class RecursiveWalk extends Walker {
     }
 
     @Override
-    public void doHash(File dir, OutputStreamWriter stream) {
-        File[] fileList = new File[0];
-        if (dir.isDirectory() && (fileList = dir.listFiles()) != null) {
-            for (File file : fileList) {
-                doHash(file, stream);
+    public void doHash(String dirPath, OutputStreamWriter stream) {
+        File dir = new File(dirPath);
+
+        String[] subPathList = new String[0];
+        if (dir.isDirectory() && (subPathList = dir.list()) != null) {
+            for (String path : subPathList) {
+                doHash(path, stream);
             }
         } else {
-            if (fileList == null) {
+            if (subPathList == null) {
                 System.err.println("Something went wrong while iterating over directory");
             }
-            WALK.doHash(dir, stream);
+            WALK.doHash(dirPath, stream);
         }
     }
 

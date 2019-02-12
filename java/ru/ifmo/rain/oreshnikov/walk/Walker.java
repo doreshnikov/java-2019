@@ -38,7 +38,7 @@ abstract class Walker {
 
     protected void run(List<String> paths, OutputStreamWriter writer) {
         for (String path : paths) {
-            doHash(new File(path), writer);
+            doHash(path, writer);
         }
         try {
             writer.close();
@@ -47,6 +47,6 @@ abstract class Walker {
         }
     }
 
-    protected abstract void doHash(File path, OutputStreamWriter stream);
+    protected abstract void doHash(String path, OutputStreamWriter stream);
 
 }

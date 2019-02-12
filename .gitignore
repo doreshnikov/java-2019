@@ -7,3 +7,6 @@ __Test__*
 
 *.class
 *.output
+
+run/*
+!run/*.cmd

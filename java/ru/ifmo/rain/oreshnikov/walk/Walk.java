@@ -32,7 +32,9 @@ public class Walk extends Walker {
     }
 
     @Override
-    public void doHash(File file, OutputStreamWriter writer) {
+    public void doHash(String filePath, OutputStreamWriter writer) {
+        File file = new File(filePath);
+
         int hash = 0;
         if (file.isFile()) {
             try {
@@ -41,11 +43,11 @@ public class Walk extends Walker {
                 System.err.println(e.toString());
             }
         } else {
-            System.err.printf("File %s is missing\n", Utils.escape(file.getPath()));
+            System.err.printf("File %s is missing\n", filePath);
         }
 
         try {
-            writer.write(String.format("%08x %s\n", hash, Utils.escape(file.getPath())));
+            writer.append(String.format("%08x ", hash)).append(filePath).append('\n');
         } catch (IOException e) {
             System.err.println("Something went wrong while writing to file");
         }

@@ -28,8 +28,4 @@ class Utils {
         return hash;
     }
 
-    static String escape(String fileName) {
-        return fileName.replace("\\", "\\\\");
-    }
-
 }
