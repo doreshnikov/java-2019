@@ -17,18 +17,18 @@ import java.util.List;
 abstract class Walker {
 
     protected static Pair<List<String>, OutputStreamWriter> parseArguments(String inputFile, String outputFile) {
-        OutputStreamWriter writer;
-        try {
-            writer = new OutputStreamWriter(new FileOutputStream(outputFile), Charset.forName("utf-8"));
-        } catch (FileNotFoundException e) {
-            System.err.println(e.toString());
-            return null;
-        }
-
         List<String> paths;
         try {
             paths = Files.readAllLines(Path.of(inputFile), Charset.forName("utf-8"));
         } catch (InvalidPathException | IOException e) {
+            System.err.println(e.toString());
+            return null;
+        }
+
+        OutputStreamWriter writer;
+        try {
+            writer = new OutputStreamWriter(new FileOutputStream(outputFile), Charset.forName("utf-8"));
+        } catch (FileNotFoundException e) {
             System.err.println(e.toString());
             return null;
         }
@@ -47,6 +47,6 @@ abstract class Walker {
         }
     }
 
-    protected abstract void doHash(String path, OutputStreamWriter stream);
+    protected abstract void doHash(String path, OutputStreamWriter writer);
 
 }

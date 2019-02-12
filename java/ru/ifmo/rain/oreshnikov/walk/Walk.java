@@ -2,10 +2,10 @@ package ru.ifmo.rain.oreshnikov.walk;
 
 import net.java.quickcheck.collection.Pair;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.List;
-
-import ru.ifmo.rain.oreshnikov.walk.Utils;
 
 /**
  * @author doreshnikov

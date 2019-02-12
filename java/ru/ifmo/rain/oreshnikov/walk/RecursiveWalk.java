@@ -2,9 +2,10 @@ package ru.ifmo.rain.oreshnikov.walk;
 
 import net.java.quickcheck.collection.Pair;
 
-import java.io.*;
+import java.io.File;
+import java.io.OutputStreamWriter;
+import java.nio.file.Paths;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * @author doreshnikov
@@ -33,19 +34,19 @@ public class RecursiveWalk extends Walker {
     }
 
     @Override
-    public void doHash(String dirPath, OutputStreamWriter stream) {
+    public void doHash(String dirPath, OutputStreamWriter writer) {
         File dir = new File(dirPath);
 
         String[] subPathList = new String[0];
         if (dir.isDirectory() && (subPathList = dir.list()) != null) {
             for (String path : subPathList) {
-                doHash(path, stream);
+                doHash(Paths.get(dir.getPath(), path).toString(), writer);
             }
         } else {
             if (subPathList == null) {
                 System.err.println("Something went wrong while iterating over directory");
             }
-            WALK.doHash(dirPath, stream);
+            WALK.doHash(dirPath, writer);
         }
     }
 
