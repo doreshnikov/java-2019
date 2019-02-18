@@ -1,8 +1,6 @@
 package ru.ifmo.rain.oreshnikov.walk;
 
 import java.io.File;
-import java.io.FileWriter;
-import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.file.Paths;
 
