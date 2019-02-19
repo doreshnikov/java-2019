@@ -1,1 +1,1 @@
-java -cp "../out/production/java-2019" -p "../lib;../artifacts" -m info.kgeorgiy.java.advanced.walk RecursiveWalk ru.ifmo.rain.oreshnikov.walk.RecursiveWalk %1
+java -cp "../out/production/java-2019" -p "../lib;../artifacts" -m info.kgeorgiy.java.advanced.arrayset NavigableSet ru.ifmo.rain.oreshnikov.arrayset.ArraySet %1

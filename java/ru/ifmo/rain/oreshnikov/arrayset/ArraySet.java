@@ -1,5 +1,7 @@
 package ru.ifmo.rain.oreshnikov.arrayset;
 
+import com.sun.source.tree.Tree;
+
 import java.util.*;
 
 /**
@@ -17,21 +19,28 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
     }
 
     public ArraySet(Collection<? extends T> collection) {
-        elements = new ArrayList<>(collection);
+        elements = new ArrayList<>(new TreeSet<>(collection));
         comparator = null;
     }
 
     public ArraySet(Collection<? extends T> collection, Comparator<? super T> comparator) {
-        elements = new ArrayList<>(collection);
+        TreeSet<T> temporary = new TreeSet<>(comparator);
+        temporary.addAll(collection);
+        elements = new ArrayList<>(temporary);
         this.comparator = comparator;
     }
 
+    @Override
+    public boolean contains(Object o) {
+        return insertionIndex((T) Objects.requireNonNull(o)) >= 0;
+    }
+
     /*
-    Reverse constructor
+    Empty constructor
      */
-    private ArraySet(ArraySet<T> origin) {
-        elements = new FastReverseList<>(origin.elements);
-        comparator = origin.comparator.reversed();
+    private ArraySet(Comparator<? super T> comparator) {
+        elements = Collections.emptyList();
+        this.comparator = comparator;
     }
 
     private T checkedGet(int index, boolean nothrow) {
@@ -52,44 +61,40 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
         return Collections.binarySearch(elements, t, comparator);
     }
 
-    private int lowerIndex(T t) {
+    private int lowerIndex(T t, boolean inclusive) {
         int index = insertionIndex(t);
-        return index >= 0 ? index - 1 : -index - 2;
+        if (index < 0) {
+            return -index - 2;
+        }
+        return inclusive ? index : index - 1;
     }
 
-    private int floorIndex(T t) {
-        int index = lowerIndex(t);
-        return t == checkedGet(index + 1) ? index + 1 : index;
-    }
-
-    private int higherIndex(T t) {
+    private int higherIndex(T t, boolean inclusive) {
         int index = insertionIndex(t);
-        return index >= 0 ? index + 1 : -index - 1;
-    }
-
-    private int ceilingIndex(T t) {
-        int index = higherIndex(t);
-        return t == checkedGet(index - 1) ? index - 1 : index;
+        if (index < 0) {
+            return -index - 1;
+        }
+        return inclusive ? index : index + 1;
     }
 
     @Override
     public T lower(T t) {
-        return checkedGet(lowerIndex(t));
+        return checkedGet(lowerIndex(t, false));
     }
 
     @Override
     public T floor(T t) {
-        return checkedGet(floorIndex(t));
+        return checkedGet(lowerIndex(t, true));
     }
 
     @Override
     public T higher(T t) {
-        return checkedGet(higherIndex(t));
+        return checkedGet(higherIndex(t, false));
     }
 
     @Override
     public T ceiling(T t) {
-        return checkedGet(ceilingIndex(t));
+        return checkedGet(higherIndex(t, true));
     }
 
     @Override
@@ -108,8 +113,8 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
     }
 
     @Override
-    public NavigableSet<T> descendingSet() {
-        return new ArraySet<>(this);
+    public ArraySet<T> descendingSet() {
+        return new ArraySet<>(new FastReverseList<>(elements), comparator.reversed());
     }
 
     @Override
@@ -118,21 +123,27 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
     }
 
     @Override
-    public NavigableSet<T> subSet(T fromElement, boolean fromInclusive, T toElement, boolean toInclusive) {
-        int fromIndex = fromInclusive ? ceilingIndex(fromElement) : higherIndex(fromElement);
-        int toIndex = toInclusive ? floorIndex(toElement) : lowerIndex(toElement);
-        return toIndex > fromIndex || toIndex == -1 || fromIndex == elements.size() ?
-                Collections.emptyNavigableSet() :
-                new ArraySet<>(elements.subList(fromIndex, toIndex), comparator);
+    public ArraySet<T> subSet(T fromElement, boolean fromInclusive, T toElement, boolean toInclusive) {
+        int fromIndex = higherIndex(fromElement, fromInclusive);
+        int toIndex = lowerIndex(toElement, toInclusive);
+        return toIndex < fromIndex ?
+                new ArraySet<>(comparator) :
+                new ArraySet<>(elements.subList(fromIndex, toIndex + 1), comparator);
     }
 
     @Override
-    public NavigableSet<T> headSet(T toElement, boolean inclusive) {
+    public ArraySet<T> headSet(T toElement, boolean inclusive) {
+        if (isEmpty()) {
+            return new ArraySet<>(comparator);
+        }
         return subSet(first(), true, toElement, inclusive);
     }
 
     @Override
-    public NavigableSet<T> tailSet(T fromElement, boolean inclusive) {
+    public ArraySet<T> tailSet(T fromElement, boolean inclusive) {
+        if (isEmpty()) {
+            return new ArraySet<>(comparator);
+        }
         return subSet(fromElement, inclusive, last(), true);
     }
 
@@ -142,17 +153,17 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
     }
 
     @Override
-    public SortedSet<T> subSet(T fromElement, T toElement) {
+    public ArraySet<T> subSet(T fromElement, T toElement) {
         return subSet(fromElement, true, toElement, false);
     }
 
     @Override
-    public SortedSet<T> headSet(T toElement) {
-        return headSet(toElement, true);
+    public ArraySet<T> headSet(T toElement) {
+        return headSet(toElement, false);
     }
 
     @Override
-    public SortedSet<T> tailSet(T fromElement) {
+    public ArraySet<T> tailSet(T fromElement) {
         return tailSet(fromElement, true);
     }
 

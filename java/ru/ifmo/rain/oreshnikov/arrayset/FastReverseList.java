@@ -8,32 +8,24 @@ import java.util.*;
  */
 
 class FastReverseList<T> extends AbstractList<T> {
-    private final List<T> elements;
+    private final List<T> data;
     private boolean reversed;
 
     /*
-    Initializer constructor
+    Initializer + reverse constructor
      */
     FastReverseList(List<T> data) {
-        elements = data;
-        reversed = false;
-    }
-
-    /*
-    Reverse constructor
-     */
-    FastReverseList(FastReverseList<T> origin) {
-        elements = origin.elements;
-        reversed = !origin.reversed;
+        this.data = data;
+        reversed = data instanceof FastReverseList && !((FastReverseList<T>) data).reversed;
     }
 
     @Override
     public T get(int index) {
-        return elements.get(reversed ? elements.size() - index - 1 : index);
+        return data.get(reversed ? data.size() - index - 1 : index);
     }
 
     @Override
     public int size() {
-        return elements.size();
+        return data.size();
     }
 }
