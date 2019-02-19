@@ -58,7 +58,7 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
     }
 
     private int insertionIndex(T t) {
-        return Collections.binarySearch(elements, t, comparator);
+        return Collections.binarySearch(elements, Objects.requireNonNull(t), comparator);
     }
 
     private int lowerIndex(T t, boolean inclusive) {
