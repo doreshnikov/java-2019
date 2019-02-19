@@ -15,8 +15,14 @@ class FastReverseList<T> extends AbstractList<T> {
     Initializer + reverse constructor
      */
     FastReverseList(List<T> data) {
-        this.data = data;
-        reversed = data instanceof FastReverseList && !((FastReverseList<T>) data).reversed;
+        if (data instanceof FastReverseList) {
+            FastReverseList<T> list = (FastReverseList<T>) data;
+            this.data = list.data;
+            this.reversed = !list.reversed;
+        } else {
+            this.data = data;
+            reversed = false;
+        }
     }
 
     @Override
