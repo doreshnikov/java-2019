@@ -21,7 +21,7 @@ class FastReverseList<T> extends AbstractList<T> {
             this.reversed = !list.reversed;
         } else {
             this.data = data;
-            reversed = false;
+            reversed = true;
         }
     }
 

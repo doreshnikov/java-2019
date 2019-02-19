@@ -1,7 +1,5 @@
 package ru.ifmo.rain.oreshnikov.arrayset;
 
-import com.sun.source.tree.Tree;
-
 import java.util.*;
 
 /**
@@ -30,21 +28,26 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
         this.comparator = comparator;
     }
 
-    @Override
-    public boolean contains(Object o) {
-        return insertionIndex((T) Objects.requireNonNull(o)) >= 0;
-    }
-
     /*
-    Empty constructor
-     */
-    private ArraySet(Comparator<? super T> comparator) {
-        elements = Collections.emptyList();
+    Non-sorting constructor
+    */
+    private ArraySet(List<T> elements, Comparator<? super T> comparator, boolean noSorting) {
+        this.elements = elements;
         this.comparator = comparator;
     }
 
+    @Override
+    @SuppressWarnings("unchecked")
+    public boolean contains(Object o) {
+        try {
+            return insertionIndex((T) Objects.requireNonNull(o)) >= 0;
+        } catch (ClassCastException e) {
+            return false;
+        }
+    }
+
     private T checkedGet(int index, boolean nothrow) {
-        if (index > -1 && index < elements.size()) {
+        if (-1 < index && index < elements.size()) {
             return elements.get(index);
         } else if (nothrow) {
             return null;
@@ -99,12 +102,12 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
 
     @Override
     public T pollFirst() {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("Poll first is not supported");
     }
 
     @Override
     public T pollLast() {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("Poll last is not supported");
     }
 
     @Override
@@ -114,7 +117,7 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
 
     @Override
     public ArraySet<T> descendingSet() {
-        return new ArraySet<>(new FastReverseList<>(elements), comparator.reversed());
+        return new ArraySet<>(new FastReverseList<>(elements), comparator.reversed(), false);
     }
 
     @Override
@@ -127,14 +130,14 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
         int fromIndex = higherIndex(fromElement, fromInclusive);
         int toIndex = lowerIndex(toElement, toInclusive);
         return toIndex < fromIndex ?
-                new ArraySet<>(comparator) :
-                new ArraySet<>(elements.subList(fromIndex, toIndex + 1), comparator);
+                new ArraySet<>(Collections.emptyList(), comparator) :
+                new ArraySet<>(elements.subList(fromIndex, toIndex + 1), comparator, true);
     }
 
     @Override
     public ArraySet<T> headSet(T toElement, boolean inclusive) {
         if (isEmpty()) {
-            return new ArraySet<>(comparator);
+            return this;
         }
         return subSet(first(), true, toElement, inclusive);
     }
@@ -142,7 +145,7 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
     @Override
     public ArraySet<T> tailSet(T fromElement, boolean inclusive) {
         if (isEmpty()) {
-            return new ArraySet<>(comparator);
+            return this;
         }
         return subSet(fromElement, inclusive, last(), true);
     }
