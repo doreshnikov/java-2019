@@ -19,14 +19,14 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
     }
 
     public ArraySet(Collection<? extends T> collection) {
-        elements = new ArrayList<>(new TreeSet<>(collection));
+        elements = List.copyOf(new TreeSet<>(collection));
         comparator = null;
     }
 
     public ArraySet(Collection<? extends T> collection, Comparator<? super T> comparator) {
         TreeSet<T> temporary = new TreeSet<>(comparator);
         temporary.addAll(collection);
-        elements = new ArrayList<>(temporary);
+        elements = List.copyOf(temporary);
         this.comparator = comparator;
     }
 
