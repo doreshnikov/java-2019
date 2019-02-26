@@ -1,7 +1,10 @@
 package ru.ifmo.rain.oreshnikov.walk;
 
-import java.io.File;
-import java.io.Writer;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
@@ -9,16 +12,20 @@ import java.nio.file.Paths;
  * @date 07-Feb-2019
  */
 
-public class RecursiveWalk extends Walker {
+public class RecursiveWalk {
 
     private static final String USAGE_TIP =
             "Expected usage: java RecursiveWalk <input> <output>\nwhere <input> points to a text file with paths list";
-    private static final Walk WALK =
-            new Walk();
 
     public static void main(String[] args) {
         if (args == null || args.length != 2 || args[0] == null || args[1] == null) {
-            System.out.println("Invalid arguments number");
+            if (args == null || args.length != 2) {
+                System.out.println("Invalid arguments amount");
+            } else if (args[0] == null) {
+                System.out.println("Input file must not be null");
+            } else {
+                System.out.println("Output file must not be null");
+            }
             System.out.println(USAGE_TIP);
             return;
         }
@@ -29,27 +36,28 @@ public class RecursiveWalk extends Walker {
         }
     }
 
-    @Override
-    public void doHash(String dirPath, Writer writer) throws WalkerException {
-        if (dirPath == null || writer == null) {
-            throw new WalkerException("Expected not-null arguments");
-        }
-        File dir = new File(dirPath);
-
-        String[] subPathList = new String[0];
-        if (dir.isDirectory() && (subPathList = dir.list()) != null) {
-            for (String path : subPathList) {
-                doHash(Paths.get(dir.getPath(), path).toString(), writer);
+    protected void run(String inputFilePath, String outputFilePath) throws WalkerException {
+        try (BufferedReader inputReader =
+                     new BufferedReader(new FileReader(inputFilePath, StandardCharsets.UTF_8))) {
+            try (BufferedWriter outputWriter =
+                         new BufferedWriter(new FileWriter(outputFilePath, StandardCharsets.UTF_8))) {
+                String path;
+                try {
+                    while ((path = inputReader.readLine()) != null) {
+                        try {
+                            Files.walkFileTree(Paths.get(path), new FileVisitorHasher(outputWriter));
+                        } catch (IOException | InvalidPathException e) {
+                            FileVisitorHasher.writeHash(0, path, outputWriter);
+                        }
+                    }
+                } catch (IOException e) {
+                    throw new WalkerException("Can not process input file data: " + e.getMessage());
+                }
+            } catch (IOException e) {
+                throw new WalkerException("Error processing output file: " + e.getMessage());
             }
-        } else {
-            if (subPathList == null) {
-                System.err.println("Something went wrong while iterating over directory");
-            }
-            try {
-                WALK.doHash(dirPath, writer);
-            } catch (WalkerException e) {
-                System.err.println(e.getMessage());
-            }
+        } catch (IOException e) {
+            throw new WalkerException("Error processing input file: " + e.getMessage());
         }
     }
 
