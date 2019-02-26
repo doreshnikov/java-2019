@@ -14,6 +14,7 @@ class FastReverseList<T> extends AbstractList<T> {
     /*
     Initializer + reverse constructor
      */
+    @SuppressWarnings("CastToConcreteClass")
     FastReverseList(List<T> data) {
         if (data instanceof FastReverseList) {
             FastReverseList<T> list = (FastReverseList<T>) data;
