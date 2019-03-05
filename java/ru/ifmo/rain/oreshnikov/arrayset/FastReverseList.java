@@ -7,7 +7,7 @@ import java.util.*;
  * @date 19-Feb-19
  */
 
-class FastReverseList<T> extends AbstractList<T> {
+class FastReverseList<T> extends AbstractList<T> implements RandomAccess {
     private final List<T> data;
     private boolean reversed;
 
