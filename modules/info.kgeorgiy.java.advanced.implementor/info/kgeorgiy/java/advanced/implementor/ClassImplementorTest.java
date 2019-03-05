@@ -7,6 +7,7 @@ import info.kgeorgiy.java.advanced.implementor.basic.classes.standard.RMIServerI
 import info.kgeorgiy.java.advanced.implementor.basic.classes.standard.RelationNotFoundException;
 import org.junit.Test;
 
+import javax.imageio.stream.FileCacheImageInputStream;
 import java.io.IOException;
 
 /**
@@ -33,12 +34,11 @@ public class ClassImplementorTest extends InterfaceImplementorTest {
     }
 
     @Test
-    @Test
     public void test12_standardNonClasses() throws IOException {
         test(true, void.class, String[].class, int[].class, String.class, boolean.class);
     }
     @Test
-    public void test13_constructorThrows() thr  ows IOException {
+    public void test13_constructorThrows() throws IOException {
         test(false, FileCacheImageInputStream.class);
     }
     @Test
