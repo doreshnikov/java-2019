@@ -18,7 +18,7 @@ import java.util.stream.Stream;
  */
 
 public class StudentDB implements AdvancedStudentGroupQuery {
-    private final Comparator<Student> defaultStudentComparator = Comparator
+    private static final Comparator<Student> STUDENT_BY_NAME_COMPARATOR = Comparator
             .comparing(Student::getLastName, String::compareTo)
             .thenComparing(Student::getFirstName, String::compareTo)
             .thenComparingInt(Student::getId);
@@ -34,12 +34,8 @@ public class StudentDB implements AdvancedStudentGroupQuery {
         return mapToCollection(students, mapper, ArrayList::new);
     }
 
-    private Stream<Student> sortToStream(Stream<Student> students, Comparator<Student> comparator) {
-        return students.sorted(comparator);
-    }
-
     private List<Student> sortToList(Collection<Student> students, Comparator<Student> comparator) {
-        return sortToStream(students.stream(), comparator)
+        return students.stream().sorted(comparator)
                 .collect(Collectors.toList());
     }
 
@@ -48,7 +44,7 @@ public class StudentDB implements AdvancedStudentGroupQuery {
     }
 
     private List<Student> filterAndSortToList(Collection<Student> students, Predicate<Student> condition) {
-        return sortToStream(filterToStream(students.stream(), condition), defaultStudentComparator)
+        return filterToStream(students.stream(), condition).sorted(STUDENT_BY_NAME_COMPARATOR)
                 .collect(Collectors.toList());
     }
 
@@ -60,7 +56,7 @@ public class StudentDB implements AdvancedStudentGroupQuery {
 
     private Stream<Map.Entry<String, List<Student>>> groupToSortedEntriesStream(Stream<Student> students,
                                                                                 Comparator<Student> comparator) {
-        return groupToEntriesStream(sortToStream(students, comparator));
+        return groupToEntriesStream(students.sorted(comparator));
     }
 
     private List<Group> sortToGroupList(Collection<Student> students, Comparator<Student> comparator) {
@@ -127,7 +123,7 @@ public class StudentDB implements AdvancedStudentGroupQuery {
 
     @Override
     public List<Student> sortStudentsByName(Collection<Student> students) {
-        return sortToList(students, defaultStudentComparator);
+        return sortToList(students, STUDENT_BY_NAME_COMPARATOR);
     }
 
     @Override
@@ -154,7 +150,7 @@ public class StudentDB implements AdvancedStudentGroupQuery {
 
     @Override
     public List<Group> getGroupsByName(Collection<Student> students) {
-        return sortToGroupList(students, defaultStudentComparator);
+        return sortToGroupList(students, STUDENT_BY_NAME_COMPARATOR);
     }
 
     @Override

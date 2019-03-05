@@ -31,7 +31,7 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
     /*
     Non-sorting constructor
     */
-    private ArraySet(List<T> elements, Comparator<? super T> comparator, boolean noSorting) {
+    private ArraySet(List<T> elements, Comparator<? super T> comparator) {
         this.elements = elements;
         this.comparator = comparator;
     }
@@ -117,7 +117,7 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
 
     @Override
     public ArraySet<T> descendingSet() {
-        return new ArraySet<>(new FastReverseList<>(elements), comparator.reversed(), false);
+        return new ArraySet<>(new FastReverseList<>(elements), comparator.reversed());
     }
 
     @Override
@@ -131,7 +131,7 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
         int toIndex = lowerIndex(toElement, toInclusive);
         return toIndex < fromIndex ?
                 new ArraySet<>(Collections.emptyList(), comparator) :
-                new ArraySet<>(elements.subList(fromIndex, toIndex + 1), comparator, true);
+                new ArraySet<>(elements.subList(fromIndex, toIndex + 1), comparator);
     }
 
     @Override

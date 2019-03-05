@@ -48,12 +48,12 @@ class FileVisitorHasher extends SimpleFileVisitor<Path> {
     }
 
     @Override
-    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
         return doHash(file);
     }
 
     @Override
-    public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+    public FileVisitResult visitFileFailed(Path file, IOException exc) {
         return writeHash(0, file.toString());
     }
 

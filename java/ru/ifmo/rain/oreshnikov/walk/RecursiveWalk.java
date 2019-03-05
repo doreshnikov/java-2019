@@ -53,12 +53,16 @@ public class RecursiveWalk {
                 FileVisitorHasher hasher = new FileVisitorHasher(outputWriter);
                 String path;
 
-                while ((path = inputReader.readLine()) != null) {
-                    try {
-                        Files.walkFileTree(Paths.get(path), hasher);
-                    } catch (IOException | InvalidPathException e) {
-                        hasher.writeHash(0, path);
+                try {
+                    while ((path = inputReader.readLine()) != null) {
+                        try {
+                            Files.walkFileTree(Paths.get(path), hasher);
+                        } catch (InvalidPathException e) {
+                            hasher.writeHash(0, path);
+                        }
                     }
+                } catch (IOException e) {
+                    throw new WalkerException("Can not read line from input file: " + e.getMessage());
                 }
             } catch (IOException e) {
                 throw new WalkerException("Error processing output file: " + e.getMessage());
