@@ -38,7 +38,7 @@ public class ClassImplementorTest extends InterfaceImplementorTest {
         test(true, void.class, String[].class, int[].class, String.class, boolean.class);
     }
     @Test
-    public void test13_constructorThrows() throws IOException {
+    public void test13_constructorThrows() thr  ows IOException {
         test(false, FileCacheImageInputStream.class);
     }
     @Test

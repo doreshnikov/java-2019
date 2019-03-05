@@ -1,1 +1,1 @@
-java -cp "../out/production/java-2019" -p "../lib;../artifacts" -m info.kgeorgiy.java.advanced.student AdvancedStudentGroupQuery ru.ifmo.rain.oreshnikov.student.StudentDB %1
+java -DFile.Encoding=UTF-8 -cp "../out/production/java-2019" -p "../lib;../artifacts" -m info.kgeorgiy.java.advanced.student AdvancedStudentGroupQuery ru.ifmo.rain.oreshnikov.student.StudentDB %1

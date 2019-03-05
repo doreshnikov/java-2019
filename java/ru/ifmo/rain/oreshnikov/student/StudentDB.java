@@ -3,7 +3,6 @@ package ru.ifmo.rain.oreshnikov.student;
 import info.kgeorgiy.java.advanced.student.AdvancedStudentGroupQuery;
 import info.kgeorgiy.java.advanced.student.Group;
 import info.kgeorgiy.java.advanced.student.Student;
-import info.kgeorgiy.java.advanced.student.StudentGroupQuery;
 
 import java.util.*;
 import java.util.function.BinaryOperator;
@@ -178,9 +177,14 @@ public class StudentDB implements AdvancedStudentGroupQuery {
     @Override
     public String getMostPopularName(Collection<Student> students) {
         return students.stream()
-                .collect(Collectors.groupingBy(this::fullName, LinkedHashMap::new, Collectors.toSet()))
+                .collect(Collectors.groupingBy(
+                        this::fullName,
+                        Collectors.mapping(Student::getGroup, Collectors.toSet()))
+                )
                 .entrySet().stream()
-                .min(Map.Entry.<String, Set<String>>comparingByValue(Set::size))
-                .map(Map.Entry::getKey).orElse("");
+                .max(Map.Entry.<String, Set<String>>comparingByValue(Comparator.comparingInt(Set::size)).thenComparing(
+                        Map.Entry.comparingByKey(String::compareTo)))
+                .map(Map.Entry::getKey)
+                .orElse("");
     }
 }

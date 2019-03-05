@@ -30,7 +30,7 @@ class FileVisitorHasher extends SimpleFileVisitor<Path> {
         }
     }
 
-    private FileVisitResult doHash(Path file) throws IOException {
+    private FileVisitResult doHash(Path file) {
         int hash = FNV_X0;
         try (InputStream stream = new BufferedInputStream(Files.newInputStream(file))) {
             try {
@@ -49,10 +49,7 @@ class FileVisitorHasher extends SimpleFileVisitor<Path> {
 
     @Override
     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-        if (attrs.isRegularFile()) {
-            return doHash(file);
-        }
-        return FileVisitResult.CONTINUE;
+        return doHash(file);
     }
 
     @Override

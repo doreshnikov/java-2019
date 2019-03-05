@@ -20,23 +20,34 @@ public class RecursiveWalk {
     public static void main(String[] args) {
         if (args == null || args.length != 2 || args[0] == null || args[1] == null) {
             if (args == null || args.length != 2) {
-                System.out.println("Invalid arguments amount");
+                System.err.println("Invalid arguments amount");
             } else if (args[0] == null) {
-                System.out.println("Input file must be not null");
+                System.err.println("Input file must be not null");
             } else {
-                System.out.println("Output file must be not null");
+                System.err.println("Output file must be not null");
             }
-            System.out.println(USAGE_TIP);
+            System.err.println(USAGE_TIP);
             return;
         }
+
         try {
-            new RecursiveWalk().run(Paths.get(args[0]), Paths.get(args[1]));
+            Path inputFilePath = createPath(args[0], "Invalid input file name");
+            Path outputFilePath = createPath(args[1], "Invalid output file name");
+            new RecursiveWalk().run(inputFilePath, outputFilePath);
         } catch (WalkerException e) {
             System.err.println(e.getMessage());
         }
     }
 
-    protected void run(Path inputFilePath, Path outputFilePath) throws WalkerException {
+    private static Path createPath(String fileName, String onFail) throws WalkerException {
+        try {
+            return Paths.get(fileName);
+        } catch (InvalidPathException e) {
+            throw new WalkerException(String.format("%s: %s\n", onFail, e.getMessage()));
+        }
+    }
+
+    private void run(Path inputFilePath, Path outputFilePath) throws WalkerException {
         try (BufferedReader inputReader = Files.newBufferedReader(inputFilePath)) {
             try (BufferedWriter outputWriter = Files.newBufferedWriter(outputFilePath)) {
                 FileVisitorHasher hasher = new FileVisitorHasher(outputWriter);
