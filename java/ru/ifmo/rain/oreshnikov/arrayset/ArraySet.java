@@ -125,8 +125,8 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
         return descendingSet().iterator();
     }
 
-    @Override
-    public ArraySet<T> subSet(T fromElement, boolean fromInclusive, T toElement, boolean toInclusive) {
+    private ArraySet<T> subSet(T fromElement, boolean fromInclusive, T toElement, boolean toInclusive,
+                               boolean nothrow) {
         int fromIndex = higherIndex(fromElement, fromInclusive);
         int toIndex = lowerIndex(toElement, toInclusive);
         return toIndex < fromIndex ?
@@ -135,11 +135,19 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
     }
 
     @Override
+    public ArraySet<T> subSet(T fromElement, boolean fromInclusive, T toElement, boolean toInclusive) {
+        if (comparator.compare(fromElement, toElement) > 0) {
+            throw new IllegalArgumentException("Left bound should be not greater than the right one");
+        }
+        return subSet(fromElement, fromInclusive, toElement, toInclusive, false);
+    }
+
+    @Override
     public ArraySet<T> headSet(T toElement, boolean inclusive) {
         if (isEmpty()) {
             return this;
         }
-        return subSet(first(), true, toElement, inclusive);
+        return subSet(first(), true, toElement, inclusive, true);
     }
 
     @Override
@@ -147,7 +155,7 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
         if (isEmpty()) {
             return this;
         }
-        return subSet(fromElement, inclusive, last(), true);
+        return subSet(fromElement, inclusive, last(), true, true);
     }
 
     @Override

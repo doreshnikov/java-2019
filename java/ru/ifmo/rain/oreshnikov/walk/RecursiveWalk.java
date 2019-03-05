@@ -22,36 +22,32 @@ public class RecursiveWalk {
             if (args == null || args.length != 2) {
                 System.out.println("Invalid arguments amount");
             } else if (args[0] == null) {
-                System.out.println("Input file must not be null");
+                System.out.println("Input file must be not null");
             } else {
-                System.out.println("Output file must not be null");
+                System.out.println("Output file must be not null");
             }
             System.out.println(USAGE_TIP);
             return;
         }
         try {
-            new RecursiveWalk().run(args[0], args[1]);
+            new RecursiveWalk().run(Paths.get(args[0]), Paths.get(args[1]));
         } catch (WalkerException e) {
             System.err.println(e.getMessage());
         }
     }
 
-    protected void run(String inputFilePath, String outputFilePath) throws WalkerException {
-        try (BufferedReader inputReader =
-                     new BufferedReader(new FileReader(inputFilePath, StandardCharsets.UTF_8))) {
-            try (BufferedWriter outputWriter =
-                         new BufferedWriter(new FileWriter(outputFilePath, StandardCharsets.UTF_8))) {
+    protected void run(Path inputFilePath, Path outputFilePath) throws WalkerException {
+        try (BufferedReader inputReader = Files.newBufferedReader(inputFilePath)) {
+            try (BufferedWriter outputWriter = Files.newBufferedWriter(outputFilePath)) {
+                FileVisitorHasher hasher = new FileVisitorHasher(outputWriter);
                 String path;
-                try {
-                    while ((path = inputReader.readLine()) != null) {
-                        try {
-                            Files.walkFileTree(Paths.get(path), new FileVisitorHasher(outputWriter));
-                        } catch (IOException | InvalidPathException e) {
-                            FileVisitorHasher.writeHash(0, path, outputWriter);
-                        }
+
+                while ((path = inputReader.readLine()) != null) {
+                    try {
+                        Files.walkFileTree(Paths.get(path), hasher);
+                    } catch (IOException | InvalidPathException e) {
+                        hasher.writeHash(0, path);
                     }
-                } catch (IOException e) {
-                    throw new WalkerException("Can not process input file data: " + e.getMessage());
                 }
             } catch (IOException e) {
                 throw new WalkerException("Error processing output file: " + e.getMessage());

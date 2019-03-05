@@ -1,5 +1,6 @@
 package ru.ifmo.rain.oreshnikov.student;
 
+import info.kgeorgiy.java.advanced.student.AdvancedStudentGroupQuery;
 import info.kgeorgiy.java.advanced.student.Group;
 import info.kgeorgiy.java.advanced.student.Student;
 import info.kgeorgiy.java.advanced.student.StudentGroupQuery;
@@ -17,7 +18,7 @@ import java.util.stream.Stream;
  * @date 26-Feb-19
  */
 
-public class StudentDB implements StudentGroupQuery {
+public class StudentDB implements AdvancedStudentGroupQuery {
     private final Comparator<Student> defaultStudentComparator = Comparator
             .comparing(Student::getLastName, String::compareTo)
             .thenComparing(Student::getFirstName, String::compareTo)
@@ -83,6 +84,10 @@ public class StudentDB implements StudentGroupQuery {
         return student -> Objects.equals(student.getGroup(), group);
     }
 
+    private String fullName(Student student) {
+        return student.getFirstName() + " " + student.getLastName();
+    }
+
     @Override
     public List<String> getFirstNames(List<Student> students) {
         return mapToList(students, Student::getFirstName);
@@ -100,7 +105,7 @@ public class StudentDB implements StudentGroupQuery {
 
     @Override
     public List<String> getFullNames(List<Student> students) {
-        return mapToList(students, student -> student.getFirstName() + " " + student.getLastName());
+        return mapToList(students, this::fullName);
     }
 
     @Override
@@ -170,4 +175,12 @@ public class StudentDB implements StudentGroupQuery {
                 Comparator.comparingInt(list -> getDistinctFirstNames(list).size()));
     }
 
+    @Override
+    public String getMostPopularName(Collection<Student> students) {
+        return students.stream()
+                .collect(Collectors.groupingBy(this::fullName, LinkedHashMap::new, Collectors.toSet()))
+                .entrySet().stream()
+                .min(Map.Entry.<String, Set<String>>comparingByValue(Set::size))
+                .map(Map.Entry::getKey).orElse("");
+    }
 }
