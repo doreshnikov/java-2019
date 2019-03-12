@@ -2,7 +2,10 @@ package ru.ifmo.rain.oreshnikov.implementor;
 
 import info.kgeorgiy.java.advanced.implementor.Impler;
 import info.kgeorgiy.java.advanced.implementor.ImplerException;
+import info.kgeorgiy.java.advanced.implementor.JarImpler;
 
+import javax.tools.JavaCompiler;
+import javax.tools.ToolProvider;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -13,19 +16,24 @@ import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.jar.Attributes;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
 
 /**
  * @author doreshnikov
  * @date 05-Mar-19
  */
 
-public class Implementor implements Impler {
+public class Implementor implements Impler, JarImpler {
 
     private static final String TAB = "\t";
     private static final String SPACE = " ";
@@ -38,22 +46,31 @@ public class Implementor implements Impler {
     private static final String ARG_CLOSE = ")";
     private static final String ITEM_SEP = ", ";
 
-    public static void main(String[] args) throws ImplerException {
-        if (args == null || args.length != 2) {
+    public static void main(String[] args) {
+        if (args == null || args.length < 2 || args.length > 3) {
             System.err.println("Invalid arguments number");
-        } else if (args[0] == null) {
-            System.err.println("Class name should not be empty");
-        } else if (args[1] == null) {
-            System.err.println("Path should not be empty");
         } else {
+            for (String arg : args) {
+                if (arg == null) {
+                    System.err.println("All arguments should be not null");
+                    return;
+                }
+            }
             try {
-                new Implementor().implement(Class.forName(args[0]), Path.of(args[1]));
+                if (args.length == 2) {
+                    new Implementor().implement(Class.forName(args[0]), Path.of(args[1]));
+                } else if (!"-jar".equals(args[0])) {
+                    System.err.println("Invalid argument usage: only option available is '-jar'");
+                } else {
+                    new Implementor().implementJar(Class.forName(args[1]), Path.of(args[2]));
+                }
             } catch (ClassNotFoundException e) {
                 System.err.printf("Invalid class name given: %s\n", e.getMessage());
             } catch (InvalidPathException e) {
                 System.err.printf("Invalid path given: %s\n", e.getMessage());
             } catch (ImplerException e) {
-                System.err.printf("Error while implementing class: %s\n", e.getMessage());
+                System.err.printf("Error while creating %s file: %s\n", args.length == 2 ? "java" : "jar",
+                        e.getMessage());
             }
         }
     }
@@ -296,20 +313,15 @@ public class Implementor implements Impler {
     @Override
     public void implement(Class<?> token, Path root) throws ImplerException {
         if (token == null || root == null) {
-            throw new ImplerException("Invalid (null) arguments given");
+            throw new ImplerException("Invalid (null) argument given");
         }
         Path where;
         try {
-            where = Path.of(root.toString(), getFilePath(token));
+            where = Path.of(root.toString(), getFilePath(token), getClassName(token) + ".java");
         } catch (InvalidPathException e) {
             throw new ImplerException(e.getMessage());
         }
-        try {
-            Files.createDirectories(where);
-            where = Path.of(where.toString(), getClassName(token) + ".java");
-        } catch (IOException e) {
-            throw new ImplerException(e.getMessage());
-        }
+        ImplementorFileUtils.createDirectoriesTo(where);
         try (BufferedWriter writer = Files.newBufferedWriter(where)) {
             if (token.isPrimitive() || token.isArray() ||
                     Modifier.isFinal(token.getModifiers()) || token == Enum.class) {
@@ -322,6 +334,47 @@ public class Implementor implements Impler {
             }
         } catch (IOException e) {
             throw new ImplerException(e.getMessage());
+        }
+    }
+
+    private void buildJar(Path jarFile, Path tempDirectory, Class<?> token) throws ImplerException {
+        Manifest manifest = new Manifest();
+        manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
+
+        try (JarOutputStream stream = new JarOutputStream(Files.newOutputStream(jarFile), manifest)) {
+            stream.putNextEntry(new ZipEntry(token.getName().replace('.', '/') + "Impl.class"));
+            Files.copy(Paths.get(tempDirectory.toString(), token.getName().replace('.', '/') + "Impl.class"), stream);
+        } catch (IOException e) {
+            throw new ImplerException(e.getMessage());
+        }
+    }
+
+    @Override
+    public void implementJar(Class<?> token, Path jarFile) throws ImplerException {
+        if (token == null || jarFile == null) {
+            throw new ImplerException("Invalid (null) argument given");
+        }
+        ImplementorFileUtils.createDirectoriesTo(jarFile);
+
+        ImplementorFileUtils utils = new ImplementorFileUtils(jarFile.toAbsolutePath().getParent());
+        try {
+            implement(token, utils.getTempDirectory());
+
+            JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+            if (compiler == null) {
+                throw new ImplerException("Can not find java compiler");
+            }
+            String[] args = new String[]{
+                    "-cp",
+                    utils.getTempDirectory().toString() + ";" + System.getProperty("java.class.path"),
+                    Path.of(utils.getTempDirectory().toString(), getFilePath(token), getClassName(token) + ".java").toString()
+            };
+            if (compiler.run(null, null, null, args) != 0) {
+                throw new ImplerException("Can not compile generated code");
+            }
+            buildJar(jarFile, utils.getTempDirectory(), token);
+        } finally {
+            utils.cleanTempDirectory();
         }
     }
 
