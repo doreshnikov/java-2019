@@ -13,8 +13,8 @@ import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -50,9 +50,10 @@ public class Implementor implements Impler {
                 new Implementor().implement(Class.forName(args[0]), Path.of(args[1]));
             } catch (ClassNotFoundException e) {
                 System.err.printf("Invalid class name given: %s\n", e.getMessage());
-                ;
             } catch (InvalidPathException e) {
                 System.err.printf("Invalid path given: %s\n", e.getMessage());
+            } catch (ImplerException e) {
+                System.err.printf("Error while implementing class: %s\n", e.getMessage());
             }
         }
     }
@@ -70,6 +71,37 @@ public class Implementor implements Impler {
         @Override
         public Integer get() {
             return value++;
+        }
+    }
+
+    private class HashableMethod {
+        private final Method method;
+        private final int PRIME = 239;
+
+        HashableMethod(Method method) {
+            this.method = method;
+        }
+
+        public Method get() {
+            return method;
+        }
+
+        @Override
+        public int hashCode() {
+            return method.getName().hashCode() +
+                    PRIME * Arrays.hashCode(method.getParameterTypes()) +
+                    PRIME * PRIME * method.getReturnType().hashCode();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj instanceof HashableMethod) {
+                HashableMethod hm = (HashableMethod) obj;
+                return method.getName().equals(hm.method.getName()) &&
+                        Arrays.equals(method.getParameterTypes(), hm.method.getParameterTypes()) &&
+                        method.getReturnType().equals(hm.method.getReturnType());
+            }
+            return false;
         }
     }
 
@@ -208,30 +240,44 @@ public class Implementor implements Impler {
         );
     }
 
-    private String getConstructors(Class<?> token) {
-        return Arrays.stream(token.getConstructors())
+    private String getConstructors(Class<?> token) throws ImplerException {
+        if (token.isInterface()) {
+            return "";
+        }
+        List<Constructor<?>> constructors = Arrays.stream(token.getDeclaredConstructors())
                 .filter(c -> !Modifier.isPrivate(c.getModifiers()))
+                .collect(Collectors.toList());
+        if (constructors.isEmpty()) {
+            throw new ImplerException("Class with no non-private constructors can not be extended");
+        }
+        return constructors.stream()
                 .map(this::getConstructor)
                 .collect(Collectors.joining(EOLN));
     }
 
-    private String getMethods(Class<?> token) {
-        StringBuilder builder = new StringBuilder();
-        while (token != null) {
-            builder.append(Arrays.stream(token.getMethods())
-                    .filter(m -> Modifier.isAbstract(m.getModifiers()))
-                    .map(this::getMethod)
-                    .collect(Collectors.joining(EOLN)));
-            token = token.getSuperclass();
+    private void getAbstractMethods(Method[] methods, HashSet<HashableMethod> collector) {
+        Arrays.stream(methods)
+                .filter(m -> Modifier.isAbstract(m.getModifiers()))
+                .map(HashableMethod::new)
+                .collect(Collectors.toCollection(() -> collector));
+    }
+
+    private String getAbstractMethodsSuperclassesInclusive(Class<?> token) {
+        HashSet<HashableMethod> methods = new HashSet<>();
+        getAbstractMethods(token.getDeclaredMethods(), methods);
+        for (; token != null; token = token.getSuperclass()) {
+            getAbstractMethods(token.getMethods(), methods);
         }
-        return builder.toString();
+        return methods.stream()
+                .map(hm -> getMethod(hm.get()))
+                .collect(Collectors.joining(EOLN));
     }
 
     private String getAllClass(Class<?> token) throws ImplerException {
         return packWideBlocks(
                 packParts(getClassDefinition(token), DEF_OPEN),
                 getConstructors(token),
-                getMethods(token),
+                getAbstractMethodsSuperclassesInclusive(token),
                 DEF_CLOSE
         );
     }
@@ -252,21 +298,30 @@ public class Implementor implements Impler {
         if (token == null || root == null) {
             throw new ImplerException("Invalid (null) arguments given");
         }
-        Path where = Path.of(root.toString(), getFilePath(token));
+        Path where;
+        try {
+            where = Path.of(root.toString(), getFilePath(token));
+        } catch (InvalidPathException e) {
+            throw new ImplerException(e.getMessage());
+        }
         try {
             Files.createDirectories(where);
+            where = Path.of(where.toString(), getClassName(token) + ".java");
         } catch (IOException e) {
-            throw new ImplerException(e);
+            throw new ImplerException(e.getMessage());
         }
-        where = Path.of(where.toString(), getClassName(token) + ".java");
         try (BufferedWriter writer = Files.newBufferedWriter(where)) {
             if (token.isPrimitive() || token.isArray() ||
                     Modifier.isFinal(token.getModifiers()) || token == Enum.class) {
                 throw new ImplerException("Unsupported class token given");
             }
-            writer.write(getFullClass(token));
+            try {
+                writer.write(getFullClass(token));
+            } catch (IOException e) {
+                throw new ImplerException(e.getMessage());
+            }
         } catch (IOException e) {
-            throw new ImplerException(e);
+            throw new ImplerException(e.getMessage());
         }
     }
 
