@@ -4,17 +4,18 @@ import info.kgeorgiy.java.advanced.implementor.Impler;
 import info.kgeorgiy.java.advanced.implementor.ImplerException;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
-import java.util.AbstractSet;
+import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.List;
-import java.util.NavigableSet;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -38,10 +39,25 @@ public class Implementor implements Impler {
     private static final String ITEM_SEP = ", ";
 
     public static void main(String[] args) throws ImplerException {
-        new Implementor().implement(NavigableSet.class, Path.of("C:/Users/isuca/projects/itmo/4-semester/java-2019/run"));
+        if (args == null || args.length != 2) {
+            System.err.println("Invalid arguments number");
+        } else if (args[0] == null) {
+            System.err.println("Class name should not be empty");
+        } else if (args[1] == null) {
+            System.err.println("Path should not be empty");
+        } else {
+            try {
+                new Implementor().implement(Class.forName(args[0]), Path.of(args[1]));
+            } catch (ClassNotFoundException e) {
+                System.err.printf("Invalid class name given: %s\n", e.getMessage());
+                ;
+            } catch (InvalidPathException e) {
+                System.err.printf("Invalid path given: %s\n", e.getMessage());
+            }
+        }
     }
 
-    Implementor() {
+    public Implementor() {
     }
 
     private class IndexSupplier implements Supplier<Integer> {
@@ -93,15 +109,15 @@ public class Implementor implements Impler {
     }
 
     private String getModifiers(int mod) {
-        return Modifier.toString(mod & ~Modifier.ABSTRACT & ~Modifier.NATIVE);
+        return Modifier.toString(mod & ~Modifier.ABSTRACT);
     }
 
     private String getClassModifiers(Class<?> token) {
-        return getModifiers(token.getModifiers());
+        return getModifiers(token.getModifiers() & ~Modifier.INTERFACE);
     }
 
     private String getExecutableModifiers(Executable executable) {
-        return getModifiers(executable.getModifiers());
+        return getModifiers(executable.getModifiers() & ~Modifier.NATIVE & ~Modifier.TRANSIENT);
     }
 
     private String getPackage(Class<?> token) {
@@ -127,7 +143,7 @@ public class Implementor implements Impler {
     private String getExecutableArguments(Executable executable) {
         IndexSupplier argNames = new IndexSupplier();
         return ARG_OPEN +
-                packItems(executable.getParameterTypes(), c -> packParts(c.getSimpleName(), "_" + argNames.get())) +
+                packItems(executable.getParameterTypes(), c -> packParts(c.getCanonicalName(), "_" + argNames.get())) +
                 ARG_CLOSE;
     }
 
@@ -141,7 +157,7 @@ public class Implementor implements Impler {
     private String getExecutableExceptions(Executable executable) {
         return getIfNotEmpty(
                 "throws",
-                packItems(executable.getExceptionTypes(), Class::getSimpleName)
+                packItems(executable.getExceptionTypes(), Class::getCanonicalName)
         );
     }
 
@@ -150,10 +166,15 @@ public class Implementor implements Impler {
     }
 
     private String getDefaultValue(Class<?> ret) {
-        if (ret.isPrimitive()) {
-            return ret.equals(boolean.class) ? "false" : "0";
+        if (!ret.isPrimitive()) {
+            return "null";
+        } else if (ret.equals(void.class)) {
+            return "";
+        } else if (ret.equals(boolean.class)) {
+            return "false";
+        } else {
+            return "0";
         }
-        return "null";
     }
 
     private String getMethodBody(Method method) {
@@ -187,21 +208,23 @@ public class Implementor implements Impler {
         );
     }
 
-    private String getConstructors(Class<?> token) throws ImplerException {
-        List<Constructor<?>> constructors = Arrays.stream(token.getDeclaredConstructors())
+    private String getConstructors(Class<?> token) {
+        return Arrays.stream(token.getConstructors())
                 .filter(c -> !Modifier.isPrivate(c.getModifiers()))
-                .collect(Collectors.toList());
-        if (constructors.isEmpty()) {
-            throw new ImplerException("Target class has no non-private constructors");
-        }
-        return constructors.stream().map(this::getConstructor).collect(Collectors.joining(EOLN));
+                .map(this::getConstructor)
+                .collect(Collectors.joining(EOLN));
     }
 
     private String getMethods(Class<?> token) {
-        return Arrays.stream(token.getDeclaredMethods())
-                .filter(m -> Modifier.isAbstract(m.getModifiers()))
-                .map(this::getMethod)
-                .collect(Collectors.joining(EOLN));
+        StringBuilder builder = new StringBuilder();
+        while (token != null) {
+            builder.append(Arrays.stream(token.getMethods())
+                    .filter(m -> Modifier.isAbstract(m.getModifiers()))
+                    .map(this::getMethod)
+                    .collect(Collectors.joining(EOLN)));
+            token = token.getSuperclass();
+        }
+        return builder.toString();
     }
 
     private String getAllClass(Class<?> token) throws ImplerException {
@@ -220,14 +243,30 @@ public class Implementor implements Impler {
         );
     }
 
+    private String getFilePath(Class<?> token) {
+        return token.getPackageName().replace('.', File.separatorChar);
+    }
+
     @Override
     public void implement(Class<?> token, Path root) throws ImplerException {
+        if (token == null || root == null) {
+            throw new ImplerException("Invalid (null) arguments given");
+        }
+        Path where = Path.of(root.toString(), getFilePath(token));
         try {
-            BufferedWriter out = Files.newBufferedWriter(Path.of(root.toString(), getClassName(token) + ".java"));
-            out.write(getFullClass(token));
-            out.close();
+            Files.createDirectories(where);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new ImplerException(e);
+        }
+        where = Path.of(where.toString(), getClassName(token) + ".java");
+        try (BufferedWriter writer = Files.newBufferedWriter(where)) {
+            if (token.isPrimitive() || token.isArray() ||
+                    Modifier.isFinal(token.getModifiers()) || token == Enum.class) {
+                throw new ImplerException("Unsupported class token given");
+            }
+            writer.write(getFullClass(token));
+        } catch (IOException e) {
+            throw new ImplerException(e);
         }
     }
 

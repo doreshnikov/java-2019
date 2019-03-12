@@ -1,0 +1,1 @@
+java -cp "../out/production/java-2019" -p "../lib;../artifacts" -m info.kgeorgiy.java.advanced.implementor interface ru.ifmo.rain.oreshnikov.implementor.Implementor %1
