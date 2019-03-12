@@ -122,6 +122,14 @@ public class Implementor implements Impler, JarImpler {
         }
     }
 
+    private static String encode(String string) {
+        StringBuilder builder = new StringBuilder();
+        for (char c : string.toCharArray()) {
+            builder.append(c < 128 ? String.valueOf(c) : String.format("\\u%04x", (int) c));
+        }
+        return builder.toString();
+    }
+
     private String doTabs(int cnt) {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < cnt; i++) {
@@ -178,7 +186,7 @@ public class Implementor implements Impler, JarImpler {
     }
 
     private String getExtension(Class<?> token) {
-        return packParts(token.isInterface() ? "implements" : "extends", token.getSimpleName());
+        return packParts(token.isInterface() ? "implements" : "extends", token.getCanonicalName());
     }
 
     private String getClassDefinition(Class<?> token) {
@@ -328,7 +336,7 @@ public class Implementor implements Impler, JarImpler {
                 throw new ImplerException("Unsupported class token given");
             }
             try {
-                writer.write(getFullClass(token));
+                writer.write(encode(getFullClass(token)));
             } catch (IOException e) {
                 throw new ImplerException(e.getMessage());
             }

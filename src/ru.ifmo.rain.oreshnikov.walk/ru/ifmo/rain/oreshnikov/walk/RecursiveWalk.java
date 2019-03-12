@@ -1,7 +1,6 @@
 package ru.ifmo.rain.oreshnikov.walk;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
