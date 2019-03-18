@@ -1,1 +1,1 @@
-java -cp "../out/production/java-2019" -p "../lib;../artifacts" -m info.kgeorgiy.java.advanced.implementor %1 ru.ifmo.rain.oreshnikov.implementor.Implementor %2
+java -p ../lib;../artifacts;. --add-modules ru.ifmo.rain.oreshnikov.implementor -m info.kgeorgiy.java.advanced.implementor class ru.ifmo.rain.oreshnikov.implementor.Implementor

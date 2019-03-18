@@ -350,8 +350,9 @@ public class Implementor implements Impler, JarImpler {
         manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
 
         try (JarOutputStream stream = new JarOutputStream(Files.newOutputStream(jarFile), manifest)) {
-            stream.putNextEntry(new ZipEntry(token.getName().replace('.', '/') + "Impl.class"));
-            Files.copy(Paths.get(tempDirectory.toString(), token.getName().replace('.', '/') + "Impl.class"), stream);
+            String pathSuffix = getFilePath(token) + File.pathSeparator + token.getSimpleName() + getClassName(token) + ".class";
+            stream.putNextEntry(new ZipEntry(pathSuffix));
+            Files.copy(Paths.get(tempDirectory.toString(), pathSuffix), stream);
         } catch (IOException e) {
             throw new ImplerException(e.getMessage());
         }
@@ -372,12 +373,12 @@ public class Implementor implements Impler, JarImpler {
             if (compiler == null) {
                 throw new ImplerException("Can not find java compiler");
             }
-            String[] args = new String[]{
+            String[] cmdArgs = new String[] {
                     "-cp",
-                    utils.getTempDirectory().toString() + ";" + System.getProperty("java.class.path"),
+                    utils.getTempDirectory().toString() + File.pathSeparator + System.getProperty("java.class.path"),
                     Path.of(utils.getTempDirectory().toString(), getFilePath(token), getClassName(token) + ".java").toString()
             };
-            if (compiler.run(null, null, null, args) != 0) {
+            if (compiler.run(null, null, null, cmdArgs) != 0) {
                 throw new ImplerException("Can not compile generated code");
             }
             buildJar(jarFile, utils.getTempDirectory(), token);
