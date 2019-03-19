@@ -1,18 +1,18 @@
 package ru.ifmo.rain.oreshnikov.implementor;
 
-import info.kgeorgiy.java.advanced.implementor.BaseImplementorTest;
 import info.kgeorgiy.java.advanced.implementor.Impler;
 import info.kgeorgiy.java.advanced.implementor.ImplerException;
 import info.kgeorgiy.java.advanced.implementor.JarImpler;
 
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -21,8 +21,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.IntSupplier;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.jar.Attributes;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
@@ -32,21 +32,60 @@ import java.util.zip.ZipEntry;
 /**
  * @author doreshnikov
  * @date 05-Mar-19
+ *
+ * Class implementing {@link Impler} and {@link JarImpler}. Provides public methods to implement <tt>.java</tt>
+ * and <tt>.jar</tt> files for extending or implementing given class of interface
  */
-
 public class Implementor implements Impler, JarImpler {
 
+    /**
+     * Tabulation-type indentation for generated <tt>.java</tt> files
+     */
     private static final String TAB = "\t";
+    /**
+     * Space-type indentation for generated <tt>.java</tt> files
+     */
     private static final String SPACE = " ";
-    private static final String EOLN = System.lineSeparator();
-    private static final String ENDL = ";";
+    /**
+     * Line separator for generated <tt>.java</tt> files
+     */
+    private static final String LINE_SEP = System.lineSeparator();
 
+    /**
+     * Definition opening sign for generated <tt>.java</tt> files
+     */
     private static final String DEF_OPEN = "{";
+    /**
+     * Definition closing sign for generated <tt>.java</tt> files
+     */
     private static final String DEF_CLOSE = "}";
+    /**
+     * Argument list opening sign for generated <tt>.java</tt> files
+     */
     private static final String ARG_OPEN = "(";
+    /**
+     * Argument list closing sign for generated <tt>.java</tt> files
+     */
     private static final String ARG_CLOSE = ")";
-    private static final String ITEM_SEP = ", ";
+    /**
+     * Argument separator for generated <tt>.java</tt> files
+     */
+    private static final String ARG_SEP = ", ";
 
+    /**
+     * Main function. Provides console interface for {@link Implementor}.
+     * Runs in two modes depending on {@code args}:
+     * <ol>
+     * <li>2-argument <tt>className outputPath</tt> implements <tt>.java</tt> by running
+     * {@link #implement(Class, Path)} of {@link Impler} interface</li>
+     * <li>3-argument <tt>-jar className jarOutputPath</tt> implements <tt>.jar</tt> file by running
+     * {@link #implementJar(Class, Path)} of {@link JarImpler}</li>
+     * </ol>
+     * All arguments must be correct and not-null. If some arguments are incorrect
+     * or an error occurs in runtime an information message is printed and implementation is aborted.
+     *
+     * @param args command line arguments for application
+     */
     public static void main(String[] args) {
         if (args == null || args.length < 2 || args.length > 3) {
             System.err.println("Invalid arguments number, expected [-jar] <class.name> <output.path>");
@@ -60,7 +99,7 @@ public class Implementor implements Impler, JarImpler {
             try {
                 if (args.length == 2) {
                     new Implementor().implement(Class.forName(args[0]), Path.of(args[1]));
-                } else if (!"jar".equals(args[0])) {
+                } else if (!"-jar".equals(args[0])) {
                     System.err.printf("Invalid argument usage: only option available is -jar and %s given", args[0]);
                 } else {
                     new Implementor().implementJar(Class.forName(args[1]), Path.of(args[2]));
@@ -76,41 +115,102 @@ public class Implementor implements Impler, JarImpler {
         }
     }
 
+    /**
+     * Default constructor. Creates new instance of {@link Implementor}
+     */
     public Implementor() {
     }
 
-    private class IndexSupplier implements Supplier<Integer> {
+    /**
+     * Integer values supplier static class. Returns consecutive integer values.
+     * Is used for argument names generation in {@link #getExecutableArguments(Executable)}
+     * and {@link #getExecutableArgumentNames(Executable)}
+     */
+    private static class IndexSupplier implements IntSupplier {
+        /**
+         * Integer value used for consecutive numbers generation
+         */
         private int value;
 
+        /**
+         * Default constructor. Creates new instance of {@link IntSupplier} with {@link #value}
+         * set to zero
+         */
         IndexSupplier() {
             value = 0;
         }
 
+        /**
+         * Supplier getter method. Returns next integer depending on inner {@link #value}
+         *
+         * @return next integer value
+         */
         @Override
-        public Integer get() {
+        public int getAsInt() {
             return value++;
         }
     }
 
-    private class HashableMethod {
+    /**
+     * Hash providing method wrapper static class. Provides custom equality check for {@link Method}s
+     * independent from {@link Method#getDeclaringClass()}
+     *
+     * @see Method#hashCode()
+     * @see Method#equals(Object)
+     */
+    private static class HashableMethod {
+        /**
+         * Inner wrapped {@link Method} instance
+         */
         private final Method method;
+        /**
+         * Prime multiplier used in hashing
+         */
         private final int PRIME = 239;
+        /**
+         * Prime base module used in hashing
+         */
+        private final int BASE = 1000000007;
 
+        /**
+         * Wrapping constructor. Creates new instance of {@link HashableMethod} with wrapped {@link Method} inside
+         *
+         * @param method instance of {@link Method} class to be wrapped inside
+         */
         HashableMethod(Method method) {
             this.method = method;
         }
 
+        /**
+         * Getter for wrapped instance of {@link Method} class
+         *
+         * @return wrapped {@link #method}
+         */
         public Method get() {
             return method;
         }
 
+        /**
+         * Hash code calculator. Calculates polynomial hash code for wrapped {@link #method}
+         * using it's name, parameter types and return type
+         *
+         * @return integer hash code value
+         */
         @Override
         public int hashCode() {
-            return method.getName().hashCode() +
-                    PRIME * Arrays.hashCode(method.getParameterTypes()) +
-                    PRIME * PRIME * method.getReturnType().hashCode();
+            return ((method.getName().hashCode() +
+                    PRIME * Arrays.hashCode(method.getParameterTypes())) % BASE +
+                    (PRIME * PRIME) % BASE * method.getReturnType().hashCode()) % BASE;
         }
 
+        /**
+         * Checks if this wrapper is equal to another object.
+         * Object is considered equal if it is an instance of {@link HashableMethod}
+         * and has a wrapped {@link #method} inside with same name, parameter types and return type
+         *
+         * @param obj object to compare with
+         * @return <code>true</code> if objects are equal, <code>false</code> otherwise
+         */
         @Override
         public boolean equals(Object obj) {
             if (obj instanceof HashableMethod) {
@@ -123,14 +223,26 @@ public class Implementor implements Impler, JarImpler {
         }
     }
 
-    private static String encode(String string) {
+    /**
+     * Unicode encoder for resulting <tt>.java</tt> file. Escapes all unicode characters in <tt>\\u</tt> notation
+     *
+     * @param arg a {@link String} instance to be encoded
+     * @return a {@link String} representing unicode-escaped {@code arg}
+     */
+    private static String encode(String arg) {
         StringBuilder builder = new StringBuilder();
-        for (char c : string.toCharArray()) {
+        for (char c : arg.toCharArray()) {
             builder.append(c < 128 ? String.valueOf(c) : String.format("\\u%04x", (int) c));
         }
         return builder.toString();
     }
 
+    /**
+     * Tab provider. Returns a string containing an exact number of {@link #TAB}s
+     *
+     * @param cnt a number of tabs to return
+     * @return a {@link String} containing exactly {@code cnt} of tabs
+     */
     private String doTabs(int cnt) {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < cnt; i++) {
@@ -139,53 +251,147 @@ public class Implementor implements Impler, JarImpler {
         return builder.toString();
     }
 
+    /**
+     * Custom elements joiner. Filters given elements, than maps them to {@link String}s
+     * and concatenates them with given delimiter
+     *
+     * @param delimiter delimiter separating given values
+     * @param elements  array of values to be joined together
+     * @param filter    filtering function
+     * @param map       transforming to {@link String} function
+     * @param <T>       type of given elements
+     * @return a {@link String} containing all transformed filtered {@code elements} separated by {@code delimiter}
+     */
     private <T> String pack(String delimiter, T[] elements, Predicate<T> filter, Function<T, String> map) {
         return Arrays.stream(elements).filter(filter).map(map).collect(Collectors.joining(delimiter));
     }
 
+    /**
+     * Custom arguments joiner. Joins arguments by {@link #ARG_SEP} using given transformation
+     *
+     * @param items     array of arguments representations
+     * @param transform transforming to {@link String} function
+     * @param <T>       type of given items
+     * @return a {@link String} containing all transformed {@code items} separated by {@link #ARG_SEP}
+     */
     private <T> String packItems(T[] items, Function<T, String> transform) {
-        return pack(ITEM_SEP, items, x -> true, transform);
+        return pack(ARG_SEP, items, x -> true, transform);
     }
 
+    /**
+     * Custom {@link String} joiner. Joins varargs of {@link String} by {@link #SPACE}
+     * removing all empty arguments first
+     *
+     * @param parts strings to be joined
+     * @return a {@link String} containing all non-empty {@code parts} separated by {@link #SPACE}
+     */
     private String packParts(String... parts) {
         return pack(SPACE, parts, s -> !"".equals(s), Function.identity());
     }
 
+    /**
+     * Custom code blocks joiner. Joins statements or methods {@link String} representations by {@link #LINE_SEP}
+     * removing all empty blocks first
+     *
+     * @param wide   flag showing if the double line separator is needed
+     * @param blocks array of code blocks representations
+     * @return a {@link String} containing all non-empty {@code blocks} separated by needed number of {@link #LINE_SEP}s
+     */
     private String packBlocks(boolean wide, String... blocks) {
-        return pack(wide ? EOLN + EOLN : EOLN, blocks, s -> !"".equals(s), Function.identity());
+        return pack(wide ? LINE_SEP + LINE_SEP : LINE_SEP, blocks, s -> !"".equals(s), Function.identity());
     }
 
-    private String getIfNotEmpty(String prefix, String itemList) {
-        if (!"".equals(itemList)) {
-            return packParts(prefix, itemList);
+    /**
+     * Custom two {@link String}s joiner. Returns their combination using {@link #packParts(String...)}
+     * if {@code item} is not empty and an empty string otherwise
+     *
+     * @param prefix a prefix for concatenation
+     * @param item   a string indicating should both parts be used or not
+     * @return an empty {@link String} if the {@code item} is empty
+     * and concatenation of {@code prefix} and {@code item} with {@link #SPACE} between them otherwise
+     */
+    private String packIfNotEmpty(String prefix, String item) {
+        if (!"".equals(item)) {
+            return packParts(prefix, item);
         }
         return "";
     }
 
+    /**
+     * Returns a representation for {@link Class}, {@link Method} or {@link Constructor} common modifiers.
+     * {@link Modifier#ABSTRACT} is not included
+     *
+     * @param mod integer representing modifiers mask
+     * @return a {@link String} representing all non-abstract modifiers if present
+     * @see Method#getModifiers()
+     * @see Class#getModifiers()
+     * @see Modifier#toString(int)
+     */
     private String getModifiers(int mod) {
         return Modifier.toString(mod & ~Modifier.ABSTRACT);
     }
 
+    /**
+     * Returns a representation of given {@link Class} modifiers.
+     * {@link Modifier#ABSTRACT} and {@link Modifier#INTERFACE} are not included
+     *
+     * @param token instance of given class {@link Class} object
+     * @return a {@link String} representing all non-abstract and non-interface modifiers of given {@code token}
+     */
     private String getClassModifiers(Class<?> token) {
         return getModifiers(token.getModifiers() & ~Modifier.INTERFACE);
     }
 
+    /**
+     * Returns a representation of given {@link Method} of {@link Constructor} modifiers/
+     * {@link Modifier#ABSTRACT}, {@link Modifier#NATIVE} and {@link Modifier#TRANSIENT} are not included
+     *
+     * @param executable an instance of {@link Executable} which is a method or a constructor
+     * @return a {@link String} representing all neither abstract, native or transient modifiers of given {@code executable}
+     */
     private String getExecutableModifiers(Executable executable) {
         return getModifiers(executable.getModifiers() & ~Modifier.NATIVE & ~Modifier.TRANSIENT);
     }
 
+    /**
+     * Returns a package declaration for implemented <tt>.java</tt> class file.
+     * Uses {@link #packIfNotEmpty(String, String)} to determine if this declaration is needed
+     *
+     * @param token instance of given class {@link Class} object
+     * @return a {@link String} containing new class package declaration
+     */
     private String getPackage(Class<?> token) {
-        return getIfNotEmpty("package", token.getPackageName()) + ENDL;
+        return packIfNotEmpty("package", token.getPackageName()) + ";";
     }
 
+    /**
+     * Returns a class name for implemented <tt>.java</tt> class
+     *
+     * @param token instance of given class {@link Class} object
+     * @return a {@link String} containing new class name
+     */
     private String getClassName(Class<?> token) {
         return token.getSimpleName() + "Impl";
     }
 
+    /**
+     * Returns <tt>extends</tt> or <tt>implements</tt> declaration of new class
+     * depending on given base class {@code token} using {@link #packParts(String...)}
+     *
+     * @param token instance of given class {@link Class} object
+     * @return a {@link String} containing new class superclass declaration
+     */
     private String getExtension(Class<?> token) {
         return packParts(token.isInterface() ? "implements" : "extends", token.getCanonicalName());
     }
 
+    /**
+     * Returns a representation of new class full declaration line containing modifiers, class name and superclass
+     * using {@link #packParts(String...)}
+     *
+     * @param token instance of given class {@link Class} object
+     * @return a {@link String} containing new class declaration
+     */
     private String getClassDefinition(Class<?> token) {
         return packParts(
                 getClassModifiers(token),
@@ -194,31 +400,66 @@ public class Implementor implements Impler, JarImpler {
         );
     }
 
+    /**
+     * Returns a representation of {@link Executable} argument list with types and names
+     * using {@link #packItems(Object[], Function)}.
+     * Argument names are generated by {@link IndexSupplier}
+     *
+     * @param executable an instance of {@link Executable} which is a method or a constructor
+     * @return a {@link String} representing this {@code executable} argument list
+     */
     private String getExecutableArguments(Executable executable) {
         IndexSupplier argNames = new IndexSupplier();
         return ARG_OPEN +
-                packItems(executable.getParameterTypes(), c -> packParts(c.getCanonicalName(), "_" + argNames.get())) +
+                packItems(executable.getParameterTypes(), c -> packParts(c.getCanonicalName(),
+                        "_" + argNames.getAsInt())) +
                 ARG_CLOSE;
     }
 
-    private String getExecutableArgumentsNames(Executable executable) {
+    /**
+     * Returns a representation of {@link Executable} argument names list
+     * using {@link #packItems(Object[], Function)}.
+     * Argument names are generated by {@link IndexSupplier}
+     *
+     * @param executable an instance of {@link Executable} which is a constructor
+     * @return a {@link String} representing this {@code executable} argument names list
+     */
+    private String getExecutableArgumentNames(Executable executable) {
         IndexSupplier argNames = new IndexSupplier();
         return ARG_OPEN +
-                packItems(executable.getParameterTypes(), c -> "_" + argNames.get()) +
+                packItems(executable.getParameterTypes(), c -> "_" + argNames.getAsInt()) +
                 ARG_CLOSE;
     }
 
+    /**
+     * Returns a representation of {@link Executable} exceptions list using {@link #packIfNotEmpty(String, String)}.
+     *
+     * @param executable an instance of {@link Executable} which is a method or a constructor
+     * @return a {@link String} representing all throws from this {@code executable}
+     */
     private String getExecutableExceptions(Executable executable) {
-        return getIfNotEmpty(
+        return packIfNotEmpty(
                 "throws",
                 packItems(executable.getExceptionTypes(), Class::getCanonicalName)
         );
     }
 
+    /**
+     * Returns a representation of super constructor call in new class constructor body
+     *
+     * @param constructor an instance of {@link Constructor}
+     * @return a {@link String} representation of new class constructor body
+     */
     private String getConstructorBody(Constructor<?> constructor) {
-        return "super" + getExecutableArgumentsNames(constructor) + ENDL;
+        return "super" + getExecutableArgumentNames(constructor) + ";";
     }
 
+    /**
+     * Returns default return value representation for method with given {@link Method#getReturnType()}
+     *
+     * @param ret some method return value type
+     * @return a {@link String} representing default return value of this type
+     */
     private String getDefaultValue(Class<?> ret) {
         if (!ret.isPrimitive()) {
             return "null";
@@ -231,10 +472,25 @@ public class Implementor implements Impler, JarImpler {
         }
     }
 
+    /**
+     * Returns a representation of simple default return value in new class method body.
+     * If given method has no default return value, return statement is skipped using {@link #packParts(String...)}
+     *
+     * @param method an instance of {@link Method}
+     * @return a {@link String} representation of new class method body
+     */
     private String getMethodBody(Method method) {
-        return packParts("return", getDefaultValue(method.getReturnType())) + ENDL;
+        return packParts("return", getDefaultValue(method.getReturnType())) + ";";
     }
 
+    /**
+     * Full constructor builder. Returns new class full constructor representation using {@link #packParts(String...)}
+     * to combine together {@link #getExecutableModifiers(Executable)}, {@link #getClassName(Class)},
+     * {@link #getExecutableExceptions(Executable)} and {@link #packBlocks(boolean, String...)} used for body
+     *
+     * @param constructor an instance of {@link Constructor}
+     * @return a {@link String} representation of constructor declaration and body
+     */
     private String getConstructor(Constructor<?> constructor) {
         return doTabs(1) + packParts(
                 getExecutableModifiers(constructor),
@@ -248,6 +504,16 @@ public class Implementor implements Impler, JarImpler {
         );
     }
 
+    /**
+     * Full method builder. Returns new class full method representation using {@link #packParts(String...)}
+     * to combine together {@link #getExecutableModifiers(Executable)}, method return and name data,
+     * {@link #getExecutableArguments(Executable)}, {@link #getExecutableExceptions(Executable)}
+     * and {@link #packBlocks(boolean, String...)} used for body
+     *
+     *
+     * @param method an instance of {@link Method}
+     * @return a {@link String} representation of method declaration and body
+     */
     private String getMethod(Method method) {
         return doTabs(1) + packParts(
                 getExecutableModifiers(method),
@@ -262,6 +528,14 @@ public class Implementor implements Impler, JarImpler {
         );
     }
 
+    /**
+     * All constructors builder.
+     * Returns new class all constructor representations mentioned in {@link #getConstructor(Constructor)}
+     *
+     * @param token type token to create implementation for
+     * @return a {@link @String} representation of all constructors in the class separated by {@link #LINE_SEP}
+     * @throws ImplerException if there are no non-private constructors available to overriding
+     */
     private String getConstructors(Class<?> token) throws ImplerException {
         if (token.isInterface()) {
             return "";
@@ -274,27 +548,50 @@ public class Implementor implements Impler, JarImpler {
         }
         return constructors.stream()
                 .map(this::getConstructor)
-                .collect(Collectors.joining(EOLN));
+                .collect(Collectors.joining(LINE_SEP));
     }
 
-    private void getAbstractMethods(Method[] methods, HashSet<HashableMethod> collector) {
+    /**
+     * Abstract methods collector. Collects all abstract methods from given {@code methods} to given {@code collector}.
+     *
+     * @param methods an array of {@link Method}s to select from
+     * @param collector a {@link HashSet<HashableMethod>} to collect to
+     */
+    private void collectAbstractMethods(Method[] methods, HashSet<HashableMethod> collector) {
         Arrays.stream(methods)
                 .filter(m -> Modifier.isAbstract(m.getModifiers()))
                 .map(HashableMethod::new)
                 .collect(Collectors.toCollection(() -> collector));
     }
 
+    /**
+     * All methods builder.
+     * Returns new class all abstract method representations mentioned in {@link #getMethod(Method)}.
+     * Collects all superclasses' abstract methods using {@link #collectAbstractMethods(Method[], HashSet)}
+     *
+     * @param token type token to create implementation for
+     * @return a {@link String} representation of all superclasses' abstract methods separated by {@link #LINE_SEP}
+     */
     private String getAbstractMethodsSuperclassesInclusive(Class<?> token) {
         HashSet<HashableMethod> methods = new HashSet<>();
-        getAbstractMethods(token.getDeclaredMethods(), methods);
+        collectAbstractMethods(token.getDeclaredMethods(), methods);
         for (; token != null; token = token.getSuperclass()) {
-            getAbstractMethods(token.getMethods(), methods);
+            collectAbstractMethods(token.getMethods(), methods);
         }
         return methods.stream()
                 .map(hm -> getMethod(hm.get()))
-                .collect(Collectors.joining(EOLN));
+                .collect(Collectors.joining(LINE_SEP));
     }
 
+    /**
+     * All class builder.
+     * Returns a representation of new class declaration with full body definition
+     * containing all constructors and methods built with {@link #packBlocks(boolean, String...)}
+     *
+     * @param token type token to create implementation for
+     * @return a {@link String} representation of all new class declarations and definitions
+     * @throws ImplerException if there are no non-private constructors to override in original class {@code token}
+     */
     private String getAllClass(Class<?> token) throws ImplerException {
         return packBlocks(true,
                 packParts(getClassDefinition(token), DEF_OPEN),
@@ -304,6 +601,14 @@ public class Implementor implements Impler, JarImpler {
         );
     }
 
+    /**
+     * Full <tt>.java</tt> file builder.
+     * Returns full <tt>.java</tt> class file content containing package declaration and full class definition.
+     *
+     * @param token type token to create implementation for
+     * @return a {@link String} representing whole <tt>.java</tt> file for a newly implemented class
+     * @throws ImplerException if there are no non-private constructors to override in original class {@code token}
+     */
     private String getFullClass(Class<?> token) throws ImplerException {
         return packBlocks(true,
                 getPackage(token),
@@ -311,10 +616,24 @@ public class Implementor implements Impler, JarImpler {
         );
     }
 
+    /**
+     * Returns package location relative path
+     *
+     * @param token type token to create implementation for
+     * @return a {@link String} representation of package relative path
+     */
     private String getFilePath(Class<?> token) {
         return token.getPackageName().replace('.', File.separatorChar);
     }
 
+    /**
+     * Implements a class extending or implementing class or interface specified by {@code token}
+     * and stores <tt>.java</tt> implementation file in given {@code root}
+     * 
+     * @param token type token to create implementation for
+     * @param root root directory.
+     * @throws ImplerException if any error occurs during the implementation
+     */
     @Override
     public void implement(Class<?> token, Path root) throws ImplerException {
         if (token == null || root == null) {
@@ -342,7 +661,16 @@ public class Implementor implements Impler, JarImpler {
         }
     }
 
-    private void compileClass( Class<?> token, Path tempDirectory) throws ImplerException, IOException {
+    /**
+     * Compiles implemented class extending or implementing {@code token}
+     * and stores <tt>.class</tt> file in given {@code tempDirectory}.
+     * Uses <tt>-classpath</tt> pointing to location of class or interface specified by {@code token}
+     *
+     * @param token type token that was implemented
+     * @param tempDirectory temporary directory to store temporary <tt>.class</tt> files in
+     * @throws ImplerException if an error occurs during compilation
+     */
+    private void compileClass(Class<?> token, Path tempDirectory) throws ImplerException {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         if (compiler == null) {
             throw new ImplerException("Can not find java compiler");
@@ -363,18 +691,20 @@ public class Implementor implements Impler, JarImpler {
                 tempDirectory.toString() + File.pathSeparator + originPath.toString(),
                 Path.of(tempDirectory.toString(), getFilePath(token), getClassName(token) + ".java").toString()
         };
-        FileOutputStream s = new FileOutputStream("C:/Users/isuca/projects/itmo/4-semester/java-2019/run/out.txt");
-        System.out.print("java ");
-        for (String str : cmdArgs) {
-            System.out.print(str + " ");
-        }
-        System.out.println("\n");
-        if (compiler.run(null, s, s, cmdArgs) != 0) {
-            s.close();
+        if (compiler.run(null, null, null, cmdArgs) != 0) {
             throw new ImplerException("Can not compile generated code");
         }
     }
 
+    /**
+     * Builds a <tt>.jar</tt> file containing compiled by {@link #compileClass(Class, Path)}
+     * sources of implemented class using basic {@link Manifest}
+     *
+     * @param jarFile path where resulting <tt>.jar</tt> should be saved
+     * @param tempDirectory temporary directory where all <tt>.class</tt> files are stored
+     * @param token type token that was implemented
+     * @throws ImplerException if {@link JarOutputStream} processing throws an {@link IOException}
+     */
     private void buildJar(Path jarFile, Path tempDirectory, Class<?> token) throws ImplerException {
         Manifest manifest = new Manifest();
         manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
@@ -388,6 +718,15 @@ public class Implementor implements Impler, JarImpler {
         }
     }
 
+    /**
+     * Implements an executable java file containing compiled sources of class
+     * implemented by {@link #implement(Class, Path)} class. Creates temporary directory and deletes it after
+     * implementation using {@link ImplementorFileUtils}
+     *
+     * @param token type token to create implementation for
+     * @param jarFile target <tt>.jar</tt> file
+     * @throws ImplerException if any error occurs during the implementation
+     */
     @Override
     public void implementJar(Class<?> token, Path jarFile) throws ImplerException {
         if (token == null || jarFile == null) {
@@ -399,8 +738,6 @@ public class Implementor implements Impler, JarImpler {
             implement(token, utils.getTempDirectory());
             compileClass(token, utils.getTempDirectory());
             buildJar(jarFile, utils.getTempDirectory(), token);
-        } catch (IOException e) {
-            e.printStackTrace();
         } finally {
             utils.cleanTempDirectory();
         }

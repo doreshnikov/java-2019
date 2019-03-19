@@ -8,7 +8,7 @@ move module-info.dump %wd%\src\module-info.java
 
 cd %wd%\src
 javac -p ..\lib;..\artifacts module-info.java %location%\*.java -d %out%
-cd %out%
+cd ..\%out%
 jar -c --file=%wd%\run\Implementor.jar --main-class=%module%.Implementor --module-path=%wd%\lib;%wd%\artifacts module-info.class %location%\*.class
 cd %wd%\run
 
