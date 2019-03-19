@@ -1,1 +1,1 @@
-java -p ../lib;../artifacts;. --add-modules ru.ifmo.rain.oreshnikov.implementor -m info.kgeorgiy.java.advanced.implementor class ru.ifmo.rain.oreshnikov.implementor.Implementor
+java -p .;../lib;../artifacts --module-path .;../artifacts;../lib --add-modules ru.ifmo.rain.oreshnikov.implementor -m info.kgeorgiy.java.advanced.implementor %1 ru.ifmo.rain.oreshnikov.implementor.Implementor %2
