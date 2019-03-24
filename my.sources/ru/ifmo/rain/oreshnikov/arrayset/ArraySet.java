@@ -117,7 +117,7 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
 
     @Override
     public ArraySet<T> descendingSet() {
-        return new ArraySet<>(new FastReverseList<>(elements), comparator.reversed());
+        return new ArraySet<>(new FastReverseList<>(elements), Collections.reverseOrder(comparator));
     }
 
     @Override
@@ -140,7 +140,9 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
     @SuppressWarnings("unchecked")
     @Override
     public ArraySet<T> subSet(T fromElement, boolean fromInclusive, T toElement, boolean toInclusive) {
-        if (comparator != null && comparator.compare(fromElement, toElement) > 0) {
+        if (comparator != null && comparator.compare(fromElement, toElement) > 0 ||
+                comparator == null && fromElement instanceof Comparable &&
+                        ((Comparable) fromElement).compareTo(toElement) > 0) {
             throw new IllegalArgumentException("Left bound should be not greater than the right one");
         }
         return subSet(fromElement, fromInclusive, toElement, toInclusive, false);
