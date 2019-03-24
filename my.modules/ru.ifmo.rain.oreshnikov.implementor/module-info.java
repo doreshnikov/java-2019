@@ -1,6 +1,9 @@
 /**
+ * Implementation of {@link info.kgeorgiy.java.advanced.implementor.Impler}
+ * and {@link info.kgeorgiy.java.advanced.implementor.JarImpler} interfaces.
+ *
  * @author doreshnikov
- * @date 12-Mar-19
+ * @version 1.0
  */
 
 module ru.ifmo.rain.oreshnikov.implementor {

@@ -1,1 +1,0 @@
-java --module-path ../artifacts;../lib;. -m ru.ifmo.rain.oreshnikov.implementor %1 %2 %3

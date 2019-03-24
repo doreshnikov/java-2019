@@ -7,10 +7,10 @@ import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 
 /**
- * @author doreshnikov
- * @date 12-Mar-19
+ * Class providing directories management utilities for {@link Implementor}
  *
- * Class providing needed directories management utilities for {@link Implementor}
+ * @author doreshnikov
+ * @version 1.0
  */
 public class ImplementorFileUtils {
 

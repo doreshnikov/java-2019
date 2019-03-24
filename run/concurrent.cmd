@@ -1,1 +1,0 @@
-java -cp "../out/production/java-2019" -p "../lib;../artifacts" -m info.kgeorgiy.java.advanced.concurrent list ru.ifmo.rain.oreshnikov.concurrent.IterativeParallelism %1

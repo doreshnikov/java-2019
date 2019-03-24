@@ -30,45 +30,45 @@ import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 
 /**
- * @author doreshnikov
- * @date 05-Mar-19
+ * Class implementing {@link Impler} and {@link JarImpler}. Provides public methods to implement <code>.java</code>
+ * and <code>.jar</code> files for classes extending or implementing given class of interface.
  *
- * Class implementing {@link Impler} and {@link JarImpler}. Provides public methods to implement <tt>.java</tt>
- * and <tt>.jar</tt> files for extending or implementing given class of interface
+ * @author doreshnikov
+ * @version 1.0
  */
 public class Implementor implements Impler, JarImpler {
 
     /**
-     * Tabulation-type indentation for generated <tt>.java</tt> files
+     * Tabulation-type indentation for generated <code>.java</code> files.
      */
     private static final String TAB = "\t";
     /**
-     * Space-type indentation for generated <tt>.java</tt> files
+     * Space-type indentation for generated <code>.java</code> files.
      */
     private static final String SPACE = " ";
     /**
-     * Line separator for generated <tt>.java</tt> files
+     * Line separator for generated <code>.java</code> files.
      */
     private static final String LINE_SEP = System.lineSeparator();
 
     /**
-     * Definition opening sign for generated <tt>.java</tt> files
+     * Definition opening sign for generated <code>.java</code> files.
      */
     private static final String DEF_OPEN = "{";
     /**
-     * Definition closing sign for generated <tt>.java</tt> files
+     * Definition closing sign for generated <code>.java</code> files.
      */
     private static final String DEF_CLOSE = "}";
     /**
-     * Argument list opening sign for generated <tt>.java</tt> files
+     * Argument list opening sign for generated <code>.java</code> files.
      */
     private static final String ARG_OPEN = "(";
     /**
-     * Argument list closing sign for generated <tt>.java</tt> files
+     * Argument list closing sign for generated <code>.java</code> files.
      */
     private static final String ARG_CLOSE = ")";
     /**
-     * Argument separator for generated <tt>.java</tt> files
+     * Argument separator for generated <code>.java</code> files.
      */
     private static final String ARG_SEP = ", ";
 
@@ -76,10 +76,10 @@ public class Implementor implements Impler, JarImpler {
      * Main function. Provides console interface for {@link Implementor}.
      * Runs in two modes depending on {@code args}:
      * <ol>
-     * <li>2-argument <tt>className outputPath</tt> implements <tt>.java</tt> by running
-     * {@link #implement(Class, Path)} of {@link Impler} interface</li>
-     * <li>3-argument <tt>-jar className jarOutputPath</tt> implements <tt>.jar</tt> file by running
-     * {@link #implementJar(Class, Path)} of {@link JarImpler}</li>
+     * <li>2-argument <code>className outputPath</code> creates <code>.java</code> file by executing
+     * provided with {@link Impler} method {@link #implement(Class, Path)}</li>
+     * <li>3-argument <code>-jar className jarOutputPath</code> creates <code>.jar</code> file by executing
+     * provided with {@link JarImpler} method {@link #implementJar(Class, Path)}</li>
      * </ol>
      * All arguments must be correct and not-null. If some arguments are incorrect
      * or an error occurs in runtime an information message is printed and implementation is aborted.
@@ -116,7 +116,7 @@ public class Implementor implements Impler, JarImpler {
     }
 
     /**
-     * Default constructor. Creates new instance of {@link Implementor}
+     * Default constructor. Creates new instance of {@link Implementor}.
      */
     public Implementor() {
     }
@@ -124,24 +124,24 @@ public class Implementor implements Impler, JarImpler {
     /**
      * Integer values supplier static class. Returns consecutive integer values.
      * Is used for argument names generation in {@link #getExecutableArguments(Executable)}
-     * and {@link #getExecutableArgumentNames(Executable)}
+     * and {@link #getExecutableArgumentNames(Executable)}.
      */
     private static class IndexSupplier implements IntSupplier {
         /**
-         * Integer value used for consecutive numbers generation
+         * Integer value used for consecutive numbers generation.
          */
         private int value;
 
         /**
          * Default constructor. Creates new instance of {@link IntSupplier} with {@link #value}
-         * set to zero
+         * set to zero.
          */
         IndexSupplier() {
             value = 0;
         }
 
         /**
-         * Supplier getter method. Returns next integer depending on inner {@link #value}
+         * Supplier getter method. Returns next integer depending on inner {@link #value}.
          *
          * @return next integer value
          */
@@ -153,27 +153,27 @@ public class Implementor implements Impler, JarImpler {
 
     /**
      * Hash providing method wrapper static class. Provides custom equality check for {@link Method}s
-     * independent from {@link Method#getDeclaringClass()}
+     * independent from {@link Method#getDeclaringClass()}.
      *
      * @see Method#hashCode()
      * @see Method#equals(Object)
      */
     private static class HashableMethod {
         /**
-         * Inner wrapped {@link Method} instance
+         * Inner wrapped {@link Method} instance.
          */
         private final Method method;
         /**
-         * Prime multiplier used in hashing
+         * Prime multiplier used in hashing.
          */
         private final int PRIME = 239;
         /**
-         * Prime base module used in hashing
+         * Prime base module used in hashing.
          */
         private final int BASE = 1000000007;
 
         /**
-         * Wrapping constructor. Creates new instance of {@link HashableMethod} with wrapped {@link Method} inside
+         * Wrapping constructor. Creates new instance of {@link HashableMethod} with wrapped {@link Method} inside.
          *
          * @param method instance of {@link Method} class to be wrapped inside
          */
@@ -182,7 +182,7 @@ public class Implementor implements Impler, JarImpler {
         }
 
         /**
-         * Getter for wrapped instance of {@link Method} class
+         * Getter for wrapped instance of {@link Method} class.
          *
          * @return wrapped {@link #method}
          */
@@ -192,7 +192,7 @@ public class Implementor implements Impler, JarImpler {
 
         /**
          * Hash code calculator. Calculates polynomial hash code for wrapped {@link #method}
-         * using it's name, parameter types and return type
+         * using it's name, parameter types and return type.
          *
          * @return integer hash code value
          */
@@ -206,7 +206,7 @@ public class Implementor implements Impler, JarImpler {
         /**
          * Checks if this wrapper is equal to another object.
          * Object is considered equal if it is an instance of {@link HashableMethod}
-         * and has a wrapped {@link #method} inside with same name, parameter types and return type
+         * and has a wrapped {@link #method} inside with same name, parameter types and return type.
          *
          * @param obj object to compare with
          * @return <code>true</code> if objects are equal, <code>false</code> otherwise
@@ -224,7 +224,8 @@ public class Implementor implements Impler, JarImpler {
     }
 
     /**
-     * Unicode encoder for resulting <tt>.java</tt> file. Escapes all unicode characters in <tt>\\u</tt> notation
+     * Unicode encoder for resulting <code>.java</code> file.
+     * Escapes all unicode characters in <code>\\u</code> notation.
      *
      * @param arg a {@link String} instance to be encoded
      * @return a {@link String} representing unicode-escaped {@code arg}
@@ -238,7 +239,7 @@ public class Implementor implements Impler, JarImpler {
     }
 
     /**
-     * Tab provider. Returns a string containing an exact number of {@link #TAB}s
+     * Tab provider. Returns a string containing an exact number of {@link #TAB} symbols.
      *
      * @param cnt a number of tabs to return
      * @return a {@link String} containing exactly {@code cnt} of tabs
@@ -253,7 +254,7 @@ public class Implementor implements Impler, JarImpler {
 
     /**
      * Custom elements joiner. Filters given elements, than maps them to {@link String}s
-     * and concatenates them with given delimiter
+     * and concatenates them with given delimiter.
      *
      * @param delimiter delimiter separating given values
      * @param elements  array of values to be joined together
@@ -267,7 +268,7 @@ public class Implementor implements Impler, JarImpler {
     }
 
     /**
-     * Custom arguments joiner. Joins arguments by {@link #ARG_SEP} using given transformation
+     * Custom arguments joiner. Joins arguments by {@link #ARG_SEP} using given transformation.
      *
      * @param items     array of arguments representations
      * @param transform transforming to {@link String} function
@@ -280,7 +281,7 @@ public class Implementor implements Impler, JarImpler {
 
     /**
      * Custom {@link String} joiner. Joins varargs of {@link String} by {@link #SPACE}
-     * removing all empty arguments first
+     * removing all empty arguments first.
      *
      * @param parts strings to be joined
      * @return a {@link String} containing all non-empty {@code parts} separated by {@link #SPACE}
@@ -291,7 +292,7 @@ public class Implementor implements Impler, JarImpler {
 
     /**
      * Custom code blocks joiner. Joins statements or methods {@link String} representations by {@link #LINE_SEP}
-     * removing all empty blocks first
+     * removing all empty blocks first.
      *
      * @param wide   flag showing if the double line separator is needed
      * @param blocks array of code blocks representations
@@ -303,7 +304,7 @@ public class Implementor implements Impler, JarImpler {
 
     /**
      * Custom two {@link String}s joiner. Returns their combination using {@link #packParts(String...)}
-     * if {@code item} is not empty and an empty string otherwise
+     * if {@code item} is not empty and an empty string otherwise.
      *
      * @param prefix a prefix for concatenation
      * @param item   a string indicating should both parts be used or not
@@ -319,7 +320,7 @@ public class Implementor implements Impler, JarImpler {
 
     /**
      * Returns a representation for {@link Class}, {@link Method} or {@link Constructor} common modifiers.
-     * {@link Modifier#ABSTRACT} is not included
+     * {@link Modifier#ABSTRACT} is not included.
      *
      * @param mod integer representing modifiers mask
      * @return a {@link String} representing all non-abstract modifiers if present
@@ -333,7 +334,7 @@ public class Implementor implements Impler, JarImpler {
 
     /**
      * Returns a representation of given {@link Class} modifiers.
-     * {@link Modifier#ABSTRACT} and {@link Modifier#INTERFACE} are not included
+     * {@link Modifier#ABSTRACT} and {@link Modifier#INTERFACE} are not included.
      *
      * @param token instance of given class {@link Class} object
      * @return a {@link String} representing all non-abstract and non-interface modifiers of given {@code token}
@@ -344,7 +345,7 @@ public class Implementor implements Impler, JarImpler {
 
     /**
      * Returns a representation of given {@link Method} of {@link Constructor} modifiers/
-     * {@link Modifier#ABSTRACT}, {@link Modifier#NATIVE} and {@link Modifier#TRANSIENT} are not included
+     * {@link Modifier#ABSTRACT}, {@link Modifier#NATIVE} and {@link Modifier#TRANSIENT} are not included.
      *
      * @param executable an instance of {@link Executable} which is a method or a constructor
      * @return a {@link String} representing all neither abstract, native or transient modifiers of given {@code executable}
@@ -354,8 +355,8 @@ public class Implementor implements Impler, JarImpler {
     }
 
     /**
-     * Returns a package declaration for implemented <tt>.java</tt> class file.
-     * Uses {@link #packIfNotEmpty(String, String)} to determine if this declaration is needed
+     * Returns a package declaration for implemented <code>.java</code> class file.
+     * Uses {@link #packIfNotEmpty(String, String)} to determine if this declaration is needed.
      *
      * @param token instance of given class {@link Class} object
      * @return a {@link String} containing new class package declaration
@@ -365,7 +366,7 @@ public class Implementor implements Impler, JarImpler {
     }
 
     /**
-     * Returns a class name for implemented <tt>.java</tt> class
+     * Returns a class name for implemented <code>.java</code> class.
      *
      * @param token instance of given class {@link Class} object
      * @return a {@link String} containing new class name
@@ -375,8 +376,8 @@ public class Implementor implements Impler, JarImpler {
     }
 
     /**
-     * Returns <tt>extends</tt> or <tt>implements</tt> declaration of new class
-     * depending on given base class {@code token} using {@link #packParts(String...)}
+     * Returns <code>extends</code> or <code>implements</code> declaration of new class
+     * depending on given base class {@code token} using {@link #packParts(String...)}.
      *
      * @param token instance of given class {@link Class} object
      * @return a {@link String} containing new class superclass declaration
@@ -387,7 +388,7 @@ public class Implementor implements Impler, JarImpler {
 
     /**
      * Returns a representation of new class full declaration line containing modifiers, class name and superclass
-     * using {@link #packParts(String...)}
+     * using {@link #packParts(String...)}.
      *
      * @param token instance of given class {@link Class} object
      * @return a {@link String} containing new class declaration
@@ -403,7 +404,7 @@ public class Implementor implements Impler, JarImpler {
     /**
      * Returns a representation of {@link Executable} argument list with types and names
      * using {@link #packItems(Object[], Function)}.
-     * Argument names are generated by {@link IndexSupplier}
+     * Argument names are generated by {@link IndexSupplier}.
      *
      * @param executable an instance of {@link Executable} which is a method or a constructor
      * @return a {@link String} representing this {@code executable} argument list
@@ -419,7 +420,7 @@ public class Implementor implements Impler, JarImpler {
     /**
      * Returns a representation of {@link Executable} argument names list
      * using {@link #packItems(Object[], Function)}.
-     * Argument names are generated by {@link IndexSupplier}
+     * Argument names are generated by {@link IndexSupplier}.
      *
      * @param executable an instance of {@link Executable} which is a constructor
      * @return a {@link String} representing this {@code executable} argument names list
@@ -445,7 +446,7 @@ public class Implementor implements Impler, JarImpler {
     }
 
     /**
-     * Returns a representation of super constructor call in new class constructor body
+     * Returns a representation of super constructor call in new class constructor body.
      *
      * @param constructor an instance of {@link Constructor}
      * @return a {@link String} representation of new class constructor body
@@ -455,7 +456,7 @@ public class Implementor implements Impler, JarImpler {
     }
 
     /**
-     * Returns default return value representation for method with given {@link Method#getReturnType()}
+     * Returns default return value representation for method with given {@link Method#getReturnType()}.
      *
      * @param ret some method return value type
      * @return a {@link String} representing default return value of this type
@@ -474,7 +475,7 @@ public class Implementor implements Impler, JarImpler {
 
     /**
      * Returns a representation of simple default return value in new class method body.
-     * If given method has no default return value, return statement is skipped using {@link #packParts(String...)}
+     * If given method has no default return value, return statement is skipped using {@link #packParts(String...)}.
      *
      * @param method an instance of {@link Method}
      * @return a {@link String} representation of new class method body
@@ -486,7 +487,7 @@ public class Implementor implements Impler, JarImpler {
     /**
      * Full constructor builder. Returns new class full constructor representation using {@link #packParts(String...)}
      * to combine together {@link #getExecutableModifiers(Executable)}, {@link #getClassName(Class)},
-     * {@link #getExecutableExceptions(Executable)} and {@link #packBlocks(boolean, String...)} used for body
+     * {@link #getExecutableExceptions(Executable)} and {@link #packBlocks(boolean, String...)} used for body.
      *
      * @param constructor an instance of {@link Constructor}
      * @return a {@link String} representation of constructor declaration and body
@@ -508,8 +509,7 @@ public class Implementor implements Impler, JarImpler {
      * Full method builder. Returns new class full method representation using {@link #packParts(String...)}
      * to combine together {@link #getExecutableModifiers(Executable)}, method return and name data,
      * {@link #getExecutableArguments(Executable)}, {@link #getExecutableExceptions(Executable)}
-     * and {@link #packBlocks(boolean, String...)} used for body
-     *
+     * and {@link #packBlocks(boolean, String...)} used for body.
      *
      * @param method an instance of {@link Method}
      * @return a {@link String} representation of method declaration and body
@@ -530,11 +530,11 @@ public class Implementor implements Impler, JarImpler {
 
     /**
      * All constructors builder.
-     * Returns new class all constructor representations mentioned in {@link #getConstructor(Constructor)}
+     * Returns new class all constructor representations mentioned in {@link #getConstructor(Constructor)}.
      *
      * @param token type token to create implementation for
-     * @return a {@link @String} representation of all constructors in the class separated by {@link #LINE_SEP}
-     * @throws ImplerException if there are no non-private constructors available to overriding
+     * @return a {@link String} representation of all constructors in the class separated by {@link #LINE_SEP}
+     * @throws ImplerException if there are no non-private constructors available for overriding
      */
     private String getConstructors(Class<?> token) throws ImplerException {
         if (token.isInterface()) {
@@ -555,19 +555,20 @@ public class Implementor implements Impler, JarImpler {
      * Abstract methods collector. Collects all abstract methods from given {@code methods} to given {@code collector}.
      *
      * @param methods an array of {@link Method}s to select from
-     * @param collector a {@link HashSet<HashableMethod>} to collect to
+     * @param collector a {@link HashSet} of {@link HashableMethod} to collect to
      */
     private void collectAbstractMethods(Method[] methods, HashSet<HashableMethod> collector) {
         Arrays.stream(methods)
                 .filter(m -> Modifier.isAbstract(m.getModifiers()))
                 .map(HashableMethod::new)
-                .collect(Collectors.toCollection(() -> collector));
+                .forEach(collector::add);
     }
 
+    // TODO: add unimplemented interfaces methods collection
     /**
      * All methods builder.
      * Returns new class all abstract method representations mentioned in {@link #getMethod(Method)}.
-     * Collects all superclasses' abstract methods using {@link #collectAbstractMethods(Method[], HashSet)}
+     * Collects all superclasses' abstract methods using {@link #collectAbstractMethods(Method[], HashSet)}.
      *
      * @param token type token to create implementation for
      * @return a {@link String} representation of all superclasses' abstract methods separated by {@link #LINE_SEP}
@@ -586,7 +587,7 @@ public class Implementor implements Impler, JarImpler {
     /**
      * All class builder.
      * Returns a representation of new class declaration with full body definition
-     * containing all constructors and methods built with {@link #packBlocks(boolean, String...)}
+     * containing all constructors and methods built with {@link #packBlocks(boolean, String...)}.
      *
      * @param token type token to create implementation for
      * @return a {@link String} representation of all new class declarations and definitions
@@ -602,11 +603,11 @@ public class Implementor implements Impler, JarImpler {
     }
 
     /**
-     * Full <tt>.java</tt> file builder.
-     * Returns full <tt>.java</tt> class file content containing package declaration and full class definition.
+     * Full <code>.java</code> file builder.
+     * Returns full <code>.java</code> class file content containing package declaration and full class definition.
      *
      * @param token type token to create implementation for
-     * @return a {@link String} representing whole <tt>.java</tt> file for a newly implemented class
+     * @return a {@link String} representing whole <code>.java</code> file for a newly implemented class
      * @throws ImplerException if there are no non-private constructors to override in original class {@code token}
      */
     private String getFullClass(Class<?> token) throws ImplerException {
@@ -617,7 +618,7 @@ public class Implementor implements Impler, JarImpler {
     }
 
     /**
-     * Returns package location relative path
+     * Returns package location relative path.
      *
      * @param token type token to create implementation for
      * @return a {@link String} representation of package relative path
@@ -627,8 +628,8 @@ public class Implementor implements Impler, JarImpler {
     }
 
     /**
-     * Implements a class extending or implementing class or interface specified by {@code token}
-     * and stores <tt>.java</tt> implementation file in given {@code root}
+     * Creates a <code>.java</code> file containing source code of a class extending or implementing
+     * class or interface specified by {@code token} in location specified by {@code root}.
      * 
      * @param token type token to create implementation for
      * @param root root directory.
@@ -663,11 +664,11 @@ public class Implementor implements Impler, JarImpler {
 
     /**
      * Compiles implemented class extending or implementing {@code token}
-     * and stores <tt>.class</tt> file in given {@code tempDirectory}.
-     * Uses <tt>-classpath</tt> pointing to location of class or interface specified by {@code token}
+     * and stores <code>.class</code> file in given {@code tempDirectory}.
+     * Uses <code>-classpath</code> pointing to location of class or interface specified by {@code token}.
      *
      * @param token type token that was implemented
-     * @param tempDirectory temporary directory to store temporary <tt>.class</tt> files in
+     * @param tempDirectory temporary directory to store temporary <code>.class</code> files in
      * @throws ImplerException if an error occurs during compilation
      */
     private void compileClass(Class<?> token, Path tempDirectory) throws ImplerException {
@@ -697,11 +698,11 @@ public class Implementor implements Impler, JarImpler {
     }
 
     /**
-     * Builds a <tt>.jar</tt> file containing compiled by {@link #compileClass(Class, Path)}
-     * sources of implemented class using basic {@link Manifest}
+     * Builds a <code>.jar</code> file containing compiled by {@link #compileClass(Class, Path)}
+     * sources of implemented class using basic {@link Manifest}.
      *
-     * @param jarFile path where resulting <tt>.jar</tt> should be saved
-     * @param tempDirectory temporary directory where all <tt>.class</tt> files are stored
+     * @param jarFile path where resulting <code>.jar</code> should be saved
+     * @param tempDirectory temporary directory where all <code>.class</code> files are stored
      * @param token type token that was implemented
      * @throws ImplerException if {@link JarOutputStream} processing throws an {@link IOException}
      */
@@ -719,12 +720,12 @@ public class Implementor implements Impler, JarImpler {
     }
 
     /**
-     * Implements an executable java file containing compiled sources of class
-     * implemented by {@link #implement(Class, Path)} class. Creates temporary directory and deletes it after
-     * implementation using {@link ImplementorFileUtils}
+     * Creates a <code>.jar</code> file containing compiled sources of class
+     * implemented by {@link #implement(Class, Path)} class in location specified by {@code jarFile}.
+     * Uses temporary directory and deletes it after implementation using {@link ImplementorFileUtils}.
      *
      * @param token type token to create implementation for
-     * @param jarFile target <tt>.jar</tt> file
+     * @param jarFile target <code>.jar</code> file
      * @throws ImplerException if any error occurs during the implementation
      */
     @Override

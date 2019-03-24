@@ -127,6 +127,9 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
 
     private ArraySet<T> subSet(T fromElement, boolean fromInclusive, T toElement, boolean toInclusive,
                                boolean nothrow) {
+        if (fromElement == null || toElement == null) {
+            throw new IllegalArgumentException("Not null elements expected");
+        }
         int fromIndex = higherIndex(fromElement, fromInclusive);
         int toIndex = lowerIndex(toElement, toInclusive);
         return toIndex < fromIndex ?
@@ -134,9 +137,10 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
                 new ArraySet<>(elements.subList(fromIndex, toIndex + 1), comparator);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public ArraySet<T> subSet(T fromElement, boolean fromInclusive, T toElement, boolean toInclusive) {
-        if (comparator.compare(fromElement, toElement) > 0) {
+        if (comparator != null && comparator.compare(fromElement, toElement) > 0) {
             throw new IllegalArgumentException("Left bound should be not greater than the right one");
         }
         return subSet(fromElement, fromInclusive, toElement, toInclusive, false);
