@@ -575,7 +575,7 @@ public class Implementor implements Impler, JarImpler {
      */
     private String getAbstractMethodsSuperclassesInclusive(Class<?> token) {
         HashSet<HashableMethod> methods = new HashSet<>();
-        collectAbstractMethods(token.getDeclaredMethods(), methods);
+        collectAbstractMethods(token.getMethods(), methods);
         for (; token != null; token = token.getSuperclass()) {
             collectAbstractMethods(token.getMethods(), methods);
         }
