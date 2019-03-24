@@ -552,34 +552,35 @@ public class Implementor implements Impler, JarImpler {
     }
 
     /**
-     * Abstract methods collector. Collects all abstract methods from given {@code methods} to given {@code collector}.
+     * Methods collector. Collects all methods from given {@code methods} array
+     * to given {@code collector} converting them to {@link HashableMethod}.
      *
      * @param methods an array of {@link Method}s to select from
      * @param collector a {@link HashSet} of {@link HashableMethod} to collect to
      */
-    private void collectAbstractMethods(Method[] methods, HashSet<HashableMethod> collector) {
+    private void collectMethods(Method[] methods, HashSet<HashableMethod> collector) {
         Arrays.stream(methods)
-                .filter(m -> Modifier.isAbstract(m.getModifiers()))
                 .map(HashableMethod::new)
                 .forEach(collector::add);
     }
 
-    // TODO: add unimplemented interfaces methods collection
     /**
-     * All methods builder.
-     * Returns new class all abstract method representations mentioned in {@link #getMethod(Method)}.
-     * Collects all superclasses' abstract methods using {@link #collectAbstractMethods(Method[], HashSet)}.
+     * All abstract methods builder.
+     * Returns new class all abstract method representations returned by {@link #getMethod(Method)}.
+     * Collects all superclasses' methods using {@link #collectMethods(Method[], HashSet)} and then
+     * filters them by {@link Modifier#isAbstract(int)}.
      *
      * @param token type token to create implementation for
      * @return a {@link String} representation of all superclasses' abstract methods separated by {@link #LINE_SEP}
      */
-    private String getAbstractMethodsSuperclassesInclusive(Class<?> token) {
+    private String getAbstractMethods(Class<?> token) {
         HashSet<HashableMethod> methods = new HashSet<>();
-        collectAbstractMethods(token.getMethods(), methods);
+        collectMethods(token.getMethods(), methods);
         for (; token != null; token = token.getSuperclass()) {
-            collectAbstractMethods(token.getMethods(), methods);
+            collectMethods(token.getDeclaredMethods(), methods);
         }
         return methods.stream()
+                .filter(m -> Modifier.isAbstract(m.get().getModifiers()))
                 .map(hm -> getMethod(hm.get()))
                 .collect(Collectors.joining(LINE_SEP));
     }
@@ -597,7 +598,7 @@ public class Implementor implements Impler, JarImpler {
         return packBlocks(true,
                 packParts(getClassDefinition(token), DEF_OPEN),
                 getConstructors(token),
-                getAbstractMethodsSuperclassesInclusive(token),
+                getAbstractMethods(token),
                 DEF_CLOSE
         );
     }
