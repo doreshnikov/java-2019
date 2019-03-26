@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.CodeSource;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -99,7 +100,7 @@ public class Implementor implements Impler, JarImpler {
             try {
                 if (args.length == 2) {
                     new Implementor().implement(Class.forName(args[0]), Path.of(args[1]));
-                } else if (!"-jar".equals(args[0])) {
+                } else if (!"-jar".equals(args[0]) && !"--jar".equals(args[0])) {
                     System.err.printf("Invalid argument usage: only option available is -jar and %s given", args[0]);
                 } else {
                     new Implementor().implementJar(Class.forName(args[1]), Path.of(args[2]));
@@ -680,7 +681,8 @@ public class Implementor implements Impler, JarImpler {
 
         Path originPath;
         try {
-            String uri = token.getProtectionDomain().getCodeSource().getLocation().getPath();
+            CodeSource codeSource = token.getProtectionDomain().getCodeSource();
+            String uri = codeSource == null ? "" : codeSource.getLocation().getPath();
             if (uri.startsWith("/")) {
                 uri = uri.substring(1);
             }

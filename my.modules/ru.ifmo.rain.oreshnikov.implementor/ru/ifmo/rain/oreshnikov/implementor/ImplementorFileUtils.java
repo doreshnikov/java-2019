@@ -1,5 +1,6 @@
 package ru.ifmo.rain.oreshnikov.implementor;
 
+import info.kgeorgiy.java.advanced.implementor.Impler;
 import info.kgeorgiy.java.advanced.implementor.ImplerException;
 
 import java.io.IOException;
@@ -69,9 +70,12 @@ public class ImplementorFileUtils {
      * @throws ImplerException if an error occurs while creating temporary directory in given {@code root}
      */
     ImplementorFileUtils(Path root) throws ImplerException {
+        if (root == null) {
+            throw new ImplerException("Invalid directory provided");
+        }
         try {
             tempDirectory = Files.createTempDirectory(root.toAbsolutePath(), "tempdir");
-        } catch (NullPointerException | IOException e) {
+        } catch (IOException e) {
             throw new ImplerException(String.format("Unable to create temporary directory: %s", e.getMessage()));
         }
     }

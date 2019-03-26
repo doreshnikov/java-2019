@@ -15,9 +15,7 @@ public class ParallelMapperImpl implements ParallelMapper {
     private List<Thread> workers;
     private final Queue<Runnable> tasks;
 
-    private static final Runnable EMPTY_TASK = () -> {
-        // do nothing
-    };
+    private static final int MAX_TASKS = 100000;
 
     public ParallelMapperImpl(int threads) {
         if (threads <= 0) {
@@ -31,6 +29,7 @@ public class ParallelMapperImpl implements ParallelMapper {
                     while (!Thread.interrupted()) {
                         synchronizedRunTask();
                     }
+                } catch (InterruptedException ignored) {
                 } finally {
                     Thread.currentThread().interrupt();
                 }
@@ -39,19 +38,23 @@ public class ParallelMapperImpl implements ParallelMapper {
         workers.forEach(Thread::start);
     }
 
-    private void synchronizedRunTask() {
-        Runnable task = EMPTY_TASK;
+    private void synchronizedRunTask() throws InterruptedException {
+        Runnable task;
         synchronized (tasks) {
-            if (!tasks.isEmpty()) {
-                task = tasks.poll();
+            while (tasks.isEmpty()) {
+                tasks.wait();
             }
+            task = tasks.poll();
             tasks.notifyAll();
         }
         task.run();
     }
 
-    private void synchronizedAddTask(final Runnable task) {
+    private void synchronizedAddTask(final Runnable task) throws InterruptedException {
         synchronized (tasks) {
+            while (tasks.size() >= MAX_TASKS) {
+                tasks.wait();
+            }
             tasks.add(task);
             tasks.notifyAll();
         }
@@ -59,30 +62,30 @@ public class ParallelMapperImpl implements ParallelMapper {
 
     class SynchronizedCollector<R> {
         private List<R> results;
-        private int size;
         private int set;
 
         SynchronizedCollector(int size) {
-            this.size = size;
             this.set = 0;
-            results = Collections.nCopies(size, null);
+            results = new ArrayList<>(size);
         }
 
         void synchronizedSet(final int position, R element) {
             results.set(position, element);
             synchronized (this) {
                 set++;
-                if (set == size) {
+                if (set == results.size()) {
                     notify();
                 }
             }
         }
 
         List<R> asList() throws InterruptedException {
-            while (set < size) {
-                wait();
+            synchronized (this) {
+                while (set < results.size()) {
+                    wait();
+                }
+                return results;
             }
-            return results;
         }
     }
 
@@ -91,9 +94,7 @@ public class ParallelMapperImpl implements ParallelMapper {
         SynchronizedCollector<R> collector = new SynchronizedCollector<>(args.size());
         for (int i = 0; i < args.size(); i++) {
             final int index = i;
-            synchronizedAddTask(() -> {
-                collector.synchronizedSet(index, f.apply(args.get(index)));
-            });
+            synchronizedAddTask(() -> collector.synchronizedSet(index, f.apply(args.get(index))));
         }
         return collector.asList();
     }
