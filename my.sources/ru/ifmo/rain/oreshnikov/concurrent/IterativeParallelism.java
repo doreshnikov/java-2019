@@ -2,13 +2,8 @@ package ru.ifmo.rain.oreshnikov.concurrent;
 
 import info.kgeorgiy.java.advanced.mapper.ParallelMapper;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -37,6 +32,7 @@ public class IterativeParallelism extends BasicIterativeParallelism {
         } else {
             List<Stream<? extends T>> parts = split(threads, values);
             return reduce.apply(mapper.map(process, parts).stream());
+//            return super.parallelRun((((ParallelMapperImpl) mapper).threads + threads) / 3, values, process, reduce);
         }
     }
 }

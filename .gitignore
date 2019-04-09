@@ -8,5 +8,7 @@ __Test__*
 *.class
 *.output
 
-run/*
-!run/*.cmd
+run/default/__Test__Walk__/
+run/implementor/out/
+run/implementor/javadoc
+run/implementor/Implementor.jar
