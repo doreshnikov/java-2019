@@ -7,18 +7,24 @@ import java.util.function.Function;
 
 /**
  * @author doreshnikov
- * @date 24-Mar-19
+ * @version 1.0.0
  */
-
 public class ParallelMapperImpl implements ParallelMapper {
 
     private List<Thread> workers;
     private final Queue<Runnable> tasks;
 
-    private static final int MAX_TASKS = 100000;
+    private final int threads;
 
-    public int threads;
+    private static final int MAX_TASKS = 1000000;
 
+    /**
+     * Thread-count constructor.
+     * Creates a ParallelMapperImpl instance operating with maximum of {@code threads}
+     * threads of type {@link Thread}.
+     *
+     * @param threads maximum count of operable threads
+     */
     public ParallelMapperImpl(int threads) {
         if (threads <= 0) {
             throw new IllegalArgumentException("Threads number must be positive");
@@ -26,17 +32,18 @@ public class ParallelMapperImpl implements ParallelMapper {
         this.threads = threads;
         tasks = new ArrayDeque<>();
         workers = new ArrayList<>();
-        for (int i = 0; i < threads; i++) {
-            workers.add(new Thread(() -> {
-                try {
-                    while (!Thread.interrupted()) {
-                        synchronizedRunTask();
-                    }
-                } catch (InterruptedException ignored) {
-                } finally {
-                    Thread.currentThread().interrupt();
+        Runnable BASE_TASK = () -> {
+            try {
+                while (!Thread.interrupted()) {
+                    synchronizedRunTask();
                 }
-            }));
+            } catch (InterruptedException ignored) {
+            } finally {
+                Thread.currentThread().interrupt();
+            }
+        };
+        for (int i = 0; i < threads; i++) {
+            workers.add(new Thread(BASE_TASK));
         }
         workers.forEach(Thread::start);
     }
@@ -63,7 +70,16 @@ public class ParallelMapperImpl implements ParallelMapper {
         }
     }
 
-    class SynchronizedCollector<R> {
+    /**
+     * Getter for thread count.
+     *
+     * @return maximum thread count {@code threads}
+     */
+    public int getThreads() {
+        return threads;
+    }
+
+    private class SynchronizedCollector<R> {
         private List<R> results;
         private int set;
 
@@ -73,8 +89,8 @@ public class ParallelMapperImpl implements ParallelMapper {
         }
 
         void synchronizedSet(final int position, R element) {
-            results.set(position, element);
             synchronized (this) {
+                results.set(position, element);
                 set++;
                 if (set == results.size()) {
                     notify();
@@ -92,23 +108,50 @@ public class ParallelMapperImpl implements ParallelMapper {
         }
     }
 
+    /**
+     * Maps function {@code f} over specified {@code args}.
+     * Mapping for each element performs in parallel.
+     *
+     * @param f    mapping function
+     * @param args arguments for mapping function
+     * @param <T>  type of arguments
+     * @param <R>  type of resulting values
+     * @return {@link List} of mapping results
+     * @throws InterruptedException if some of the threads were interrupted during execution
+     */
     @Override
     public <T, R> List<R> map(Function<? super T, ? extends R> f, List<? extends T> args) throws InterruptedException {
         SynchronizedCollector<R> collector = new SynchronizedCollector<>(args.size());
+        List<RuntimeException> runtimeExceptions = new ArrayList<>();
         for (int i = 0; i < args.size(); i++) {
             final int index = i;
-            synchronizedAddTask(() -> collector.synchronizedSet(index, f.apply(args.get(index))));
+            synchronizedAddTask(() -> {
+                R value = null;
+                try {
+                    value = f.apply(args.get(index));
+                } catch (RuntimeException e) {
+                    synchronized (runtimeExceptions) {
+                        runtimeExceptions.add(e);
+                    }
+                }
+                collector.synchronizedSet(index, value);
+            });
+        }
+        if (!runtimeExceptions.isEmpty()) {
+            RuntimeException mapFail = new RuntimeException("Errors occured while mapping some of the values");
+            runtimeExceptions.forEach(mapFail::addSuppressed);
+            throw mapFail;
         }
         return collector.asList();
     }
 
+    /**
+     * Stops all threads. All unfinished mappings leave in undefined state.
+     */
     @Override
     public void close() {
         workers.forEach(Thread::interrupt);
-        try {
-            IterativeParallelism.joinAll(workers,true);
-        } catch (InterruptedException ignored) {
-        }
+        IterativeParallelism.joinAllNothrow(workers);
     }
 
 }
