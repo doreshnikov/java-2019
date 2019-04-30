@@ -25,6 +25,9 @@ public class WebCrawler implements Crawler {
     private final ExecutorService downloadersPool;
     private final ConcurrentMap<String, HostDownloader> hostMapper;
 
+    private final List<Phaser> locks;
+    private static final int MAX_WORKERS = 100000;
+
     public WebCrawler(Downloader downloader, int downloaders, int extractors, int perHost) {
         this.downloader = downloader;
         this.perHost = perHost;
@@ -32,6 +35,8 @@ public class WebCrawler implements Crawler {
         downloadersPool = Executors.newFixedThreadPool(downloaders);
         extractorsPool = Executors.newFixedThreadPool(extractors);
         hostMapper = new ConcurrentHashMap<>();
+
+        locks = new ArrayList<>();
     }
 
     public static void main(String[] args) {
@@ -59,7 +64,6 @@ public class WebCrawler implements Crawler {
     }
 
     private class HostDownloader {
-
         private final Queue<Runnable> waitingTasks;
         private int currentlyRunning;
 
@@ -68,7 +72,10 @@ public class WebCrawler implements Crawler {
             currentlyRunning = 0;
         }
 
-        synchronized private void checkedCall() {
+        synchronized private void checkedCall(boolean finished) {
+            if (finished) {
+                currentlyRunning--;
+            }
             if (currentlyRunning < perHost) {
                 callNext();
             }
@@ -82,8 +89,7 @@ public class WebCrawler implements Crawler {
                     try {
                         task.run();
                     } finally {
-                        currentlyRunning--;
-                        checkedCall();
+                        checkedCall(true);
                     }
                 });
             }
@@ -91,38 +97,65 @@ public class WebCrawler implements Crawler {
 
         synchronized void addTask(Runnable task) {
             waitingTasks.add(task);
-            checkedCall();
+            checkedCall(false);
         }
-
     }
 
     private class Worker {
 
         private final Set<String> success;
-        private final ConcurrentHashMap<String, IOException> fail;
+        private final ConcurrentMap<String, IOException> fail;
         private final Set<String> completed;
+
         private final Phaser lock;
+        private final List<List<String>> awaits;
 
-        Worker(String url) {
+        Worker(String url, int depth) {
             success = ConcurrentHashMap.newKeySet();
-            fail = new ConcurrentHashMap<>();
             completed = ConcurrentHashMap.newKeySet();
-            completed.add(url);
-            lock = new Phaser(1);
-        }
+            fail = new ConcurrentHashMap<>();
 
-        private void queueExtraction(final Document document, int depth) {
-            try {
-                document.extractLinks().stream().filter(completed::add).forEach(link -> {
-                    queueDownload(link, depth);
-                });
-            } catch (IOException ignored) {
-            } finally {
-                lock.arrive();
+            awaits = new ArrayList<>();
+            for (int i = 0; i <= depth; i++) {
+                awaits.add(new ArrayList<>());
             }
+            awaits.get(depth).add(url);
+            this.lock = new Phaser(1);
+
+            run(depth);
         }
 
-        void queueDownload(final String link, final int depth) {
+        private void run(final int depth) {
+            lock.register();
+            final Phaser level = new Phaser(1);
+            synchronized (awaits) {
+                awaits.get(depth).stream()
+                        .filter(completed::add)
+                        .forEach(link -> queueDownload(link, depth, level));
+            }
+            level.arriveAndAwaitAdvance();
+            if (depth > 0) {
+                run(depth - 1);
+            }
+            lock.arrive();
+        }
+
+        private void queueExtraction(final Document document, final int depth, final Phaser level) {
+            level.register();
+            extractorsPool.submit(() -> {
+                try {
+                    List<String> links = document.extractLinks();
+                    synchronized (awaits) {
+                        awaits.get(depth).addAll(links);
+                    }
+                } catch (IOException ignored) {
+                } finally {
+                    level.arrive();
+                }
+            });
+        }
+
+        void queueDownload(final String link, final int depth, final Phaser level) {
             String host;
             try {
                 host = URLUtils.getHost(link);
@@ -132,41 +165,43 @@ public class WebCrawler implements Crawler {
             }
 
             HostDownloader hostDownloader = hostMapper.computeIfAbsent(host, s -> new HostDownloader());
-            lock.register();
+            level.register();
             hostDownloader.addTask(() -> {
                 try {
                     Document document = downloader.download(link);
                     success.add(link);
                     if (depth > 1) {
-                        lock.register();
-                        extractorsPool.submit(() -> queueExtraction(document, depth - 1));
+                        queueExtraction(document, depth - 1, level);
                     }
                 } catch (IOException e) {
                     fail.put(link, e);
                 } finally {
-                    lock.arrive();
+                    level.arrive();
                 }
             });
         }
 
-        void awaitCompletion() {
+        Result getResult() {
             lock.arriveAndAwaitAdvance();
+            return new Result(new ArrayList<>(success), fail);
         }
-
     }
 
     @Override
     public Result download(String url, int depth) {
-        Worker worker = new Worker(url);
-        worker.queueDownload(url, depth);
-        worker.awaitCompletion();
-        return new Result(new ArrayList<>(worker.success), worker.fail);
+        return new Worker(url, depth).getResult();
     }
 
     @Override
     public void close() {
-        extractorsPool.shutdownNow();
-        downloadersPool.shutdownNow();
+        extractorsPool.shutdown();
+        downloadersPool.shutdown();
+        try {
+            extractorsPool.awaitTermination(0, TimeUnit.MILLISECONDS);
+            downloadersPool.awaitTermination(0, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
 }

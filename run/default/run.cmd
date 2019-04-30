@@ -10,6 +10,7 @@ SET pac_path=ru\ifmo\rain\oreshnikov
 
 SET wd=C:\Users\isuca\projects\itmo\4-semester\java-2019
 SET out=%wd%\out\production\java-2019
+SET run=%wd%\run\default
 
 SET req=%wd%\lib\*;%wd%\artifacts\*
 SET mreq=%wd%\lib;%wd%\artifacts
@@ -46,3 +47,5 @@ IF "%task%"=="walk" (
 
 javac --class-path %req% %dir%\*.java -d %out%
 java --class-path %out% --module-path %mreq% -m info.kgeorgiy.java.advanced.%task% %mode% %class% %2
+
+:end
