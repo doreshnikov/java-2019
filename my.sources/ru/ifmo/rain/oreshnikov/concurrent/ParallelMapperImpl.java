@@ -88,23 +88,19 @@ public class ParallelMapperImpl implements ParallelMapper {
             results = new ArrayList<>(Collections.nCopies(size, null));
         }
 
-        void synchronizedSet(final int position, R element) {
-            synchronized (this) {
-                results.set(position, element);
-                set++;
-                if (set == results.size()) {
-                    notify();
-                }
+        synchronized void synchronizedSet(final int position, R element) {
+            results.set(position, element);
+            set++;
+            if (set == results.size()) {
+                notify();
             }
         }
 
-        List<R> asList() throws InterruptedException {
-            synchronized (this) {
-                while (set < results.size()) {
-                    wait();
-                }
-                return results;
+        synchronized List<R> asList() throws InterruptedException {
+            while (set < results.size()) {
+                wait();
             }
+            return results;
         }
     }
 

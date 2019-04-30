@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author doreshnikov
@@ -64,15 +63,12 @@ public class WebCrawler implements Crawler {
         private final Queue<Runnable> waitingTasks;
         private int currentlyRunning;
 
-        private final String host;
-
-        HostDownloader(String s) {
+        HostDownloader() {
             waitingTasks = new ArrayDeque<>();
             currentlyRunning = 0;
-            host = s;
         }
 
-        synchronized private void callNext() {
+        private void callNext() {
             Runnable task = waitingTasks.poll();
             if (task != null) {
                 currentlyRunning++;
@@ -130,7 +126,7 @@ public class WebCrawler implements Crawler {
                 return;
             }
 
-            HostDownloader hostDownloader = hostMapper.computeIfAbsent(host, s -> new HostDownloader(s));
+            HostDownloader hostDownloader = hostMapper.computeIfAbsent(host, s -> new HostDownloader());
             lock.register();
             hostDownloader.addTask(() -> {
                 try {
