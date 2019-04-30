@@ -27,7 +27,7 @@ public class WebCrawler implements Crawler {
 
     public WebCrawler(Downloader downloader, int downloaders, int extractors, int perHost) {
         this.downloader = downloader;
-        this.perHost = (perHost / 3 + 1);
+        this.perHost = perHost;
 
         downloadersPool = Executors.newFixedThreadPool(downloaders);
         extractorsPool = Executors.newFixedThreadPool(extractors);
@@ -68,7 +68,13 @@ public class WebCrawler implements Crawler {
             currentlyRunning = 0;
         }
 
-        private void callNext() {
+        synchronized private void checkedCall() {
+            if (currentlyRunning < perHost) {
+                callNext();
+            }
+        }
+
+        synchronized private void callNext() {
             Runnable task = waitingTasks.poll();
             if (task != null) {
                 currentlyRunning++;
@@ -77,6 +83,7 @@ public class WebCrawler implements Crawler {
                         task.run();
                     } finally {
                         currentlyRunning--;
+                        checkedCall();
                     }
                 });
             }
@@ -84,9 +91,7 @@ public class WebCrawler implements Crawler {
 
         synchronized void addTask(Runnable task) {
             waitingTasks.add(task);
-            if (currentlyRunning < perHost) {
-                callNext();
-            }
+            checkedCall();
         }
 
     }
