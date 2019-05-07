@@ -28,7 +28,7 @@ public class PacketUtils {
     }
 
     public static boolean checkValidResponse(String requestMessage, String responseMessage) {
-        return responseMessage.endsWith(requestMessage);
+        return responseMessage.contains(requestMessage);
     }
 
 }

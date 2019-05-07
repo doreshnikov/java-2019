@@ -59,6 +59,6 @@ IF "%task%"=="walk" (
 @ECHO on
 
 javac --class-path %req% %dir%\*.java -d %out%
-java --class-path %out% --module-path %mreq% -m info.kgeorgiy.java.advanced.%kgpac% %mode% %class% %2
+java -Dfile.encoding=UTF8 --class-path %out% --module-path %mreq% -m info.kgeorgiy.java.advanced.%kgpac% %mode% %class% %2
 
 :end

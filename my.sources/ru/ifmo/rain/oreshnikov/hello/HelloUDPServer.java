@@ -3,9 +3,11 @@ package ru.ifmo.rain.oreshnikov.hello;
 import info.kgeorgiy.java.advanced.hello.HelloServer;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
@@ -105,8 +107,9 @@ public class HelloUDPServer implements HelloServer {
         }
     }
 
-    private void log(String message) {
+    private static void log(String message) {
         if (VERBOSE) {
+//            new PrintStream(System.out, true, StandardCharsets.UTF_8).println(message);
             System.out.println(message);
         }
     }

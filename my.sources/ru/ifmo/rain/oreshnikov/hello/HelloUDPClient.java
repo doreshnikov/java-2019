@@ -19,7 +19,7 @@ public class HelloUDPClient implements HelloClient {
 
     private static final String USAGE = "Usage: HelloUDPClient (name|ip) port prefix threads requests";
 
-    private static final int TIMEOUT_MINUTES_PER_REQUEST = 1;
+    private static final int TIMEOUT_SECONDS_PER_REQUEST = 10;
     private static final int SOCKET_SO_TIMEOUT = 500;
     private static final boolean VERBOSE = true;
 
@@ -60,7 +60,7 @@ public class HelloUDPClient implements HelloClient {
         ExecutorService workers = Executors.newFixedThreadPool(threads);
         IntStream.range(0, threads).forEach((threadId) -> processTask(address, prefix, threadId, requests));
         workers.shutdown();
-        workers.awaitTermination(TIMEOUT_MINUTES_PER_REQUEST * requests * threads, TimeUnit.MINUTES);
+        workers.awaitTermination(TIMEOUT_SECONDS_PER_REQUEST * requests * threads, TimeUnit.SECONDS);
     }
 
     private void processTask(final SocketAddress address, String prefix, int threadId, int requests) {
@@ -78,8 +78,9 @@ public class HelloUDPClient implements HelloClient {
                         socket.send(request);
                         socket.receive(response);
                         String responseMessage = PacketUtils.decodeMessage(response);
-                        log(String.format("Received '%s'", responseMessage));
-                        received = PacketUtils.checkValidResponse(requestMessage, responseMessage);
+                        if (received = PacketUtils.checkValidResponse(requestMessage, responseMessage)) {
+                            log(String.format("Received '%s'", responseMessage));
+                        }
                     } catch (IOException e) {
                         System.err.println("Error occured while trying to send a request or process a response: "
                                 + e.getMessage());
@@ -91,8 +92,9 @@ public class HelloUDPClient implements HelloClient {
         }
     }
 
-    private void log(String message) {
+    private static void log(String message) {
         if (VERBOSE) {
+//            new PrintStream(System.out, true, StandardCharsets.UTF_8).println(message);
             System.out.println(message);
         }
     }
