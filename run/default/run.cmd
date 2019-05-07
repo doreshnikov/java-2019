@@ -1,10 +1,5 @@
 @ECHO off
 
-rem walk        RecursiveWalk               RecursiveWalk
-rem arrayset    NavigableSet                ArraySet
-rem student     AdvancedStudentGroupQuery   StudentDB
-rem crawler     hard                        WebCrawler
-
 SET pac_name=ru.ifmo.rain.oreshnikov
 SET pac_path=ru\ifmo\rain\oreshnikov
 
@@ -50,7 +45,7 @@ IF "%task%"=="walk" (
     SET mode=client-i18n
     SET class=%cls%.HelloUDPClient
 ) ELSE IF "%task%"=="helloserver" (
-    SET mode=server
+    SET mode=server-i18n
     SET class=%cls%.HelloUDPServer
 ) ELSE IF "%task%"=="hello" (
     run helloclient %2

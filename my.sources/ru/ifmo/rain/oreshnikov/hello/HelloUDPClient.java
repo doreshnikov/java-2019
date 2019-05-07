@@ -20,7 +20,7 @@ public class HelloUDPClient implements HelloClient {
     private static final String USAGE = "Usage: HelloUDPClient (name|ip) port prefix threads requests";
 
     private static final int TIMEOUT_MINUTES_PER_REQUEST = 1;
-    private static final int SOCKET_SO_TIMEOUT = 1000;
+    private static final int SOCKET_SO_TIMEOUT = 500;
     private static final boolean VERBOSE = true;
 
     public static void main(String[] args) {
