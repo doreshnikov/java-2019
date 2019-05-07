@@ -9,13 +9,13 @@ import java.util.concurrent.*;
 
 /**
  * @author doreshnikov
- * @date 19-Apr-19
  */
 
 public class WebCrawler implements Crawler {
 
     private static final String USAGE = "Usage: WebCrawler url [depth [downloaders [extractors [perHost]]]]\n" +
             "\t (all optional values being equal to 1 by default)";
+    private static final int TERMINATION_AWAIT_MILLISECONDS = 0;
 
     private final Downloader downloader;
 
@@ -25,9 +25,6 @@ public class WebCrawler implements Crawler {
     private final ExecutorService downloadersPool;
     private final ConcurrentMap<String, HostDownloader> hostMapper;
 
-    private final List<Phaser> locks;
-    private static final int MAX_WORKERS = 100000;
-
     public WebCrawler(Downloader downloader, int downloaders, int extractors, int perHost) {
         this.downloader = downloader;
         this.perHost = perHost;
@@ -36,7 +33,6 @@ public class WebCrawler implements Crawler {
         extractorsPool = Executors.newFixedThreadPool(extractors);
         hostMapper = new ConcurrentHashMap<>();
 
-        locks = new ArrayList<>();
     }
 
     public static void main(String[] args) {
@@ -105,21 +101,20 @@ public class WebCrawler implements Crawler {
 
         private final Set<String> success;
         private final ConcurrentMap<String, IOException> fail;
-        private final Set<String> completed;
+        private final Set<String> extracted;
 
         private final Phaser lock;
-        private final List<List<String>> awaits;
+        private List<String> processing;
+        private final List<String> awaits;
 
         Worker(String url, int depth) {
             success = ConcurrentHashMap.newKeySet();
-            completed = ConcurrentHashMap.newKeySet();
+            extracted = ConcurrentHashMap.newKeySet();
             fail = new ConcurrentHashMap<>();
 
             awaits = new ArrayList<>();
-            for (int i = 0; i <= depth; i++) {
-                awaits.add(new ArrayList<>());
-            }
-            awaits.get(depth).add(url);
+            processing = new ArrayList<>();
+            awaits.add(url);
             this.lock = new Phaser(1);
 
             run(depth);
@@ -128,11 +123,10 @@ public class WebCrawler implements Crawler {
         private void run(final int depth) {
             lock.register();
             final Phaser level = new Phaser(1);
-            synchronized (awaits) {
-                awaits.get(depth).stream()
-                        .filter(completed::add)
-                        .forEach(link -> queueDownload(link, depth, level));
-            }
+            processing = new ArrayList<>(awaits);
+            awaits.clear();
+            processing.stream().filter(extracted::add)
+                    .forEach(link -> queueDownload(link, depth, level));
             level.arriveAndAwaitAdvance();
             if (depth > 0) {
                 run(depth - 1);
@@ -140,13 +134,13 @@ public class WebCrawler implements Crawler {
             lock.arrive();
         }
 
-        private void queueExtraction(final Document document, final int depth, final Phaser level) {
+        private void queueExtraction(final Document document, final Phaser level) {
             level.register();
             extractorsPool.submit(() -> {
                 try {
                     List<String> links = document.extractLinks();
                     synchronized (awaits) {
-                        awaits.get(depth).addAll(links);
+                        awaits.addAll(links);
                     }
                 } catch (IOException ignored) {
                 } finally {
@@ -171,7 +165,7 @@ public class WebCrawler implements Crawler {
                     Document document = downloader.download(link);
                     success.add(link);
                     if (depth > 1) {
-                        queueExtraction(document, depth - 1, level);
+                        queueExtraction(document, level);
                     }
                 } catch (IOException e) {
                     fail.put(link, e);
@@ -197,10 +191,10 @@ public class WebCrawler implements Crawler {
         extractorsPool.shutdown();
         downloadersPool.shutdown();
         try {
-            extractorsPool.awaitTermination(0, TimeUnit.MILLISECONDS);
-            downloadersPool.awaitTermination(0, TimeUnit.MILLISECONDS);
+            extractorsPool.awaitTermination(TERMINATION_AWAIT_MILLISECONDS, TimeUnit.MILLISECONDS);
+            downloadersPool.awaitTermination(TERMINATION_AWAIT_MILLISECONDS, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            System.err.println("Could not terminate executor pools: " + e.getMessage());
         }
     }
 

@@ -17,8 +17,15 @@ SET mreq=%wd%\lib;%wd%\artifacts
 
 SET task=%1
 SET mypac=%task%
+SET kgpac=%task%
 IF "%mypac%"=="mapper" (
     SET mypac=concurrent
+) ELSE IF "%mypac%"=="helloserver" (
+    SET mypac=hello
+    SET kgpac=hello
+) ELSE IF "%mypac%"=="helloclient" (
+    SET mypac=hello
+    SET kgpac=hello
 )
 
 SET dir=%wd%\my.sources\%pac_path%\%mypac%
@@ -39,13 +46,24 @@ IF "%task%"=="walk" (
 ) ELSE IF "%task%"=="crawler" (
     SET mode=hard
     SET class=%cls%.WebCrawler
+) ELSE IF "%task%"=="helloclient" (
+    SET mode=client-i18n
+    SET class=%cls%.HelloUDPClient
+) ELSE IF "%task%"=="helloserver" (
+    SET mode=server
+    SET class=%cls%.HelloUDPServer
+) ELSE IF "%task%"=="hello" (
+    run helloclient %2
+    run helloserver %2
+    GOTO end
 ) ELSE (
     ECHO invalid task name %task%
+    GOTO end
 )
 
 @ECHO on
 
 javac --class-path %req% %dir%\*.java -d %out%
-java --class-path %out% --module-path %mreq% -m info.kgeorgiy.java.advanced.%task% %mode% %class% %2
+java --class-path %out% --module-path %mreq% -m info.kgeorgiy.java.advanced.%kgpac% %mode% %class% %2
 
 :end
