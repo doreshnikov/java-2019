@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
+import java.util.Arrays;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -17,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 public class HelloUDPServer implements HelloServer {
 
+    private static final String USAGE = "Usage: HelloUDPServer port threads";
     private static final int TERMINATION_AWAIT_SECONDS = 1;
     private static final boolean VERBOSE = false;
 
@@ -28,6 +31,25 @@ public class HelloUDPServer implements HelloServer {
         socket = null;
         singleExecutor = null;
         workers = null;
+    }
+
+    public static void main(String[] args) {
+        if (args == null || args.length != 2) {
+            System.out.println(USAGE);
+        } else {
+            if (Arrays.stream(args).anyMatch(Objects::isNull)) {
+                System.out.println("Non-null arguments expected");
+                return;
+            }
+            try {
+                int port = Integer.parseInt(args[0]);
+                int threads = Integer.parseInt(args[1]);
+                new HelloUDPServer().start(port, threads);
+            } catch (NumberFormatException e) {
+                System.err.println("Arguments 'port' ans 'threads' are expected to be integers: " +
+                        e.getMessage());
+            }
+        }
     }
 
     @Override

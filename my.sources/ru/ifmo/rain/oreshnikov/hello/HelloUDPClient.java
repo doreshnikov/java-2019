@@ -4,6 +4,8 @@ import info.kgeorgiy.java.advanced.hello.HelloClient;
 
 import java.io.IOException;
 import java.net.*;
+import java.util.Arrays;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -15,9 +17,31 @@ import java.util.stream.IntStream;
 
 public class HelloUDPClient implements HelloClient {
 
+    private static final String USAGE = "Usage: HelloUDPClient (name|ip) port prefix threads requests";
+
     private static final int TIMEOUT_MINUTES_PER_REQUEST = 1;
     private static final int SOCKET_SO_TIMEOUT = 1000;
     private static final boolean VERBOSE = true;
+
+    public static void main(String[] args) {
+        if (args == null || args.length != 5) {
+            System.out.println(USAGE);
+        } else {
+            if (Arrays.stream(args).anyMatch(Objects::isNull)) {
+                System.out.println("Non-null arguments expected");
+                return;
+            }
+            try {
+                int port = Integer.parseInt(args[1]);
+                int threads = Integer.parseInt(args[3]);
+                int requests = Integer.parseInt(args[4]);
+                new HelloUDPClient().run(args[0], port, args[2], threads, requests);
+            } catch (NumberFormatException e) {
+                System.err.println("Arguments 'port', 'threads' and 'requests' are expected to be integers: " +
+                        e.getMessage());
+            }
+        }
+    }
 
     @Override
     public void run(String host, int port, String prefix, int threads, int requests) {
