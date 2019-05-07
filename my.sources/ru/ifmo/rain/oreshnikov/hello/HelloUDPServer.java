@@ -2,10 +2,9 @@ package ru.ifmo.rain.oreshnikov.hello;
 
 import info.kgeorgiy.java.advanced.hello.HelloServer;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.SocketAddress;
 import java.net.SocketException;
 import java.util.Arrays;
 import java.util.Objects;
@@ -41,11 +40,16 @@ public class HelloUDPServer implements HelloServer {
             try {
                 int port = Integer.parseInt(args[0]);
                 int threads = Integer.parseInt(args[1]);
+
                 try (HelloServer server = new HelloUDPServer()) {
                     server.start(port, threads);
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+                    reader.readLine();
+                } catch (IOException e) {
+                    System.err.println("Could not listen to input command");
                 }
             } catch (NumberFormatException e) {
-                System.err.println("Arguments 'port' ans 'threads' are expected to be integers: " +
+                System.out.println("Arguments 'port' ans 'threads' are expected to be integers: " +
                         e.getMessage());
             }
         }
@@ -66,19 +70,20 @@ public class HelloUDPServer implements HelloServer {
     }
 
     private void receiveAndRespond() {
-        final DatagramPacket request = PacketUtils.newEmptyPacket(receiveBufferSize);
         try {
             while (!socket.isClosed() && !Thread.interrupted()) {
+                final DatagramPacket request = PacketUtils.newEmptyPacket(receiveBufferSize);
                 socket.receive(request);
-                final String requestMessage = PacketUtils.decodeMessage(request);
-                final SocketAddress address = request.getSocketAddress();
-                log(String.format("Received '%s'", requestMessage));
+
                 workers.submit(() -> {
+                    final String requestMessage = PacketUtils.decodeMessage(request);
+                    log(String.format("Received '%s'", requestMessage));
+
                     String responseMessage = "Hello, " + requestMessage;
-                    final DatagramPacket response = PacketUtils.makeMessagePacket(address, responseMessage);
+                    PacketUtils.fillMessage(request, responseMessage);
                     log(String.format("Sending '%s'", responseMessage));
                     try {
-                        socket.send(response);
+                        socket.send(request);
                     } catch (IOException e) {
                         if (!socket.isClosed()) {
                             System.err.println("Error occured while trying to send a response: " + e.getMessage());

@@ -118,7 +118,8 @@ public class WebCrawler implements Crawler {
                 final Phaser level = new Phaser(1);
                 List<String> processing = new ArrayList<>(awaits);
                 awaits.clear();
-                processing.stream().filter(extracted::add)
+                processing.stream()
+                        .filter(extracted::add)
                         .forEach(link -> queueDownload(link, currentDepth, level));
                 level.arriveAndAwaitAdvance();
             }

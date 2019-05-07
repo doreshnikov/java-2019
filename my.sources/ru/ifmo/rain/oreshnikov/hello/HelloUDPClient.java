@@ -58,29 +58,29 @@ public class HelloUDPClient implements HelloClient {
     private void parallelProcessAll(final SocketAddress address, String prefix, int threads, int requests)
             throws InterruptedException {
         ExecutorService workers = Executors.newFixedThreadPool(threads);
-        IntStream.range(0, threads).forEach((threadId) -> processTask(address, prefix, threadId, requests));
+        IntStream.range(0, threads).forEach(threadId -> workers.submit(
+                () -> processTask(address, prefix, threadId, requests)));
         workers.shutdown();
         workers.awaitTermination(TIMEOUT_SECONDS_PER_REQUEST * requests * threads, TimeUnit.SECONDS);
     }
 
     private void processTask(final SocketAddress address, String prefix, int threadId, int requests) {
         try (DatagramSocket socket = new DatagramSocket()) {
-            int receiveBufferSize = socket.getReceiveBufferSize();
-            final DatagramPacket response = PacketUtils.newEmptyPacket(receiveBufferSize);
-            final DatagramPacket request = PacketUtils.newEmptyPacket(address, receiveBufferSize);
             socket.setSoTimeout(SOCKET_SO_TIMEOUT);
+            int receiveBufferSize = socket.getReceiveBufferSize();
+            final DatagramPacket request = PacketUtils.newEmptyPacket(address, receiveBufferSize);
             for (int requestId = 0; requestId < requests; requestId++) {
                 String requestMessage = PacketUtils.encodeMessage(prefix, threadId, requestId);
-//                final DatagramPacket request = PacketUtils.makeMessagePacket(address, requestMessage);
-                PacketUtils.fillMessage(request, requestMessage);
                 log(String.format("Sending '%s'", requestMessage));
 
                 boolean received = false;
                 while (!received && !socket.isClosed() && !Thread.interrupted()) {
                     try {
+                        PacketUtils.fillMessage(request, requestMessage);
                         socket.send(request);
-                        socket.receive(response);
-                        String responseMessage = PacketUtils.decodeMessage(response);
+                        PacketUtils.resetAndResize(request, receiveBufferSize);
+                        socket.receive(request);
+                        String responseMessage = PacketUtils.decodeMessage(request);
                         if (received = PacketUtils.checkValidResponse(requestMessage, responseMessage)) {
                             log(String.format("Received '%s'", responseMessage));
                         }
