@@ -19,9 +19,9 @@ public class HelloUDPClient implements HelloClient {
 
     private static final String USAGE = "Usage: HelloUDPClient (name|ip) port prefix threads requests";
 
-    private static final int TIMEOUT_SECONDS_PER_REQUEST = 10;
-    private static final int SOCKET_SO_TIMEOUT = 500;
-    private static final boolean VERBOSE = true;
+    private static final int TIMEOUT_SECONDS_PER_REQUEST = 5;
+    private static final int SOCKET_SO_TIMEOUT = 200;
+    private static final boolean VERBOSE = false;
 
     public static void main(String[] args) {
         if (args == null || args.length != 5) {
@@ -37,7 +37,7 @@ public class HelloUDPClient implements HelloClient {
                 int requests = Integer.parseInt(args[4]);
                 new HelloUDPClient().run(args[0], port, args[2], threads, requests);
             } catch (NumberFormatException e) {
-                System.err.println("Arguments 'port', 'threads' and 'requests' are expected to be integers: " +
+                System.out.println("Arguments 'port', 'threads' and 'requests' are expected to be integers: " +
                         e.getMessage());
             }
         }
@@ -65,12 +65,15 @@ public class HelloUDPClient implements HelloClient {
 
     private void processTask(final SocketAddress address, String prefix, int threadId, int requests) {
         try (DatagramSocket socket = new DatagramSocket()) {
+            int receiveBufferSize = socket.getReceiveBufferSize();
+            final DatagramPacket response = PacketUtils.newEmptyPacket(receiveBufferSize);
+            final DatagramPacket request = PacketUtils.newEmptyPacket(address, receiveBufferSize);
             socket.setSoTimeout(SOCKET_SO_TIMEOUT);
             for (int requestId = 0; requestId < requests; requestId++) {
                 String requestMessage = PacketUtils.encodeMessage(prefix, threadId, requestId);
+//                final DatagramPacket request = PacketUtils.makeMessagePacket(address, requestMessage);
+                PacketUtils.fillMessage(request, requestMessage);
                 log(String.format("Sending '%s'", requestMessage));
-                final DatagramPacket request = PacketUtils.makeMessagePacket(address, requestMessage);
-                final DatagramPacket response = PacketUtils.newEmptyPacket(socket.getReceiveBufferSize());
 
                 boolean received = false;
                 while (!received && !socket.isClosed() && !Thread.interrupted()) {

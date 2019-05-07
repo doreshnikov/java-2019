@@ -32,7 +32,6 @@ public class WebCrawler implements Crawler {
         downloadersPool = Executors.newFixedThreadPool(downloaders);
         extractorsPool = Executors.newFixedThreadPool(extractors);
         hostMapper = new ConcurrentHashMap<>();
-
     }
 
     public static void main(String[] args) {
@@ -45,8 +44,9 @@ public class WebCrawler implements Crawler {
                 int extractors = getArgument(args, 3);
                 int perHost = getArgument(args, 4);
 
-                new WebCrawler(new CachingDownloader(), downloaders, extractors, perHost)
-                        .download(args[0], depth);
+                try (Crawler crawler = new WebCrawler(new CachingDownloader(), downloaders, extractors, perHost)) {
+                    crawler.download(args[0], depth);
+                }
             } catch (NumberFormatException e) {
                 System.err.println("Expected numeric arguments only\n" + USAGE);
             } catch (IOException e) {
@@ -99,37 +99,28 @@ public class WebCrawler implements Crawler {
 
     private class Worker {
 
-        private final Set<String> success;
-        private final ConcurrentMap<String, IOException> fail;
-        private final Set<String> extracted;
+        private final Set<String> success = ConcurrentHashMap.newKeySet();
+        private final ConcurrentMap<String, IOException> fail = new ConcurrentHashMap<>();
+        private final Set<String> extracted = ConcurrentHashMap.newKeySet();
 
-        private final Phaser lock;
-        private List<String> processing;
-        private final List<String> awaits;
+        private final Phaser lock = new Phaser(1);
+        private final ConcurrentLinkedQueue<String> awaits = new ConcurrentLinkedQueue<>();
 
         Worker(String url, int depth) {
-            success = ConcurrentHashMap.newKeySet();
-            extracted = ConcurrentHashMap.newKeySet();
-            fail = new ConcurrentHashMap<>();
-
-            awaits = new ArrayList<>();
-            processing = new ArrayList<>();
             awaits.add(url);
-            this.lock = new Phaser(1);
-
             run(depth);
         }
 
         private void run(final int depth) {
             lock.register();
-            final Phaser level = new Phaser(1);
-            processing = new ArrayList<>(awaits);
-            awaits.clear();
-            processing.stream().filter(extracted::add)
-                    .forEach(link -> queueDownload(link, depth, level));
-            level.arriveAndAwaitAdvance();
-            if (depth > 0) {
-                run(depth - 1);
+            for (int d = 0; d < depth; d++) {
+                int currentDepth = depth - d;
+                final Phaser level = new Phaser(1);
+                List<String> processing = new ArrayList<>(awaits);
+                awaits.clear();
+                processing.stream().filter(extracted::add)
+                        .forEach(link -> queueDownload(link, currentDepth, level));
+                level.arriveAndAwaitAdvance();
             }
             lock.arrive();
         }
@@ -139,9 +130,7 @@ public class WebCrawler implements Crawler {
             extractorsPool.submit(() -> {
                 try {
                     List<String> links = document.extractLinks();
-                    synchronized (awaits) {
-                        awaits.addAll(links);
-                    }
+                    awaits.addAll(links);
                 } catch (IOException ignored) {
                 } finally {
                     level.arrive();

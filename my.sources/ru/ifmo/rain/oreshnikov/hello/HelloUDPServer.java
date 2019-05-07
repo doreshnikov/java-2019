@@ -3,11 +3,10 @@ package ru.ifmo.rain.oreshnikov.hello;
 import info.kgeorgiy.java.advanced.hello.HelloServer;
 
 import java.io.IOException;
-import java.io.PrintStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.SocketAddress;
 import java.net.SocketException;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
@@ -26,14 +25,10 @@ public class HelloUDPServer implements HelloServer {
     private static final boolean VERBOSE = false;
 
     private DatagramSocket socket;
-    private ExecutorService singleExecutor;
+    private ExecutorService mainExecutor;
     private ExecutorService workers;
 
-    public HelloUDPServer() {
-        socket = null;
-        singleExecutor = null;
-        workers = null;
-    }
+    private int receiveBufferSize = 0;
 
     public static void main(String[] args) {
         if (args == null || args.length != 2) {
@@ -46,7 +41,9 @@ public class HelloUDPServer implements HelloServer {
             try {
                 int port = Integer.parseInt(args[0]);
                 int threads = Integer.parseInt(args[1]);
-                new HelloUDPServer().start(port, threads);
+                try (HelloServer server = new HelloUDPServer()) {
+                    server.start(port, threads);
+                }
             } catch (NumberFormatException e) {
                 System.err.println("Arguments 'port' ans 'threads' are expected to be integers: " +
                         e.getMessage());
@@ -58,26 +55,28 @@ public class HelloUDPServer implements HelloServer {
     public void start(int port, int threads) {
         try {
             socket = new DatagramSocket(port);
+            receiveBufferSize = socket.getReceiveBufferSize();
+
             workers = Executors.newFixedThreadPool(threads);
-            singleExecutor = Executors.newSingleThreadExecutor();
-            singleExecutor.submit(this::receiveAndRespond);
+            mainExecutor = Executors.newSingleThreadExecutor();
+            mainExecutor.submit(this::receiveAndRespond);
         } catch (SocketException e) {
             System.err.println("Unable to establish connection via socket: " + e.getMessage());
         }
     }
 
     private void receiveAndRespond() {
-        while (!socket.isClosed() && !Thread.interrupted()) {
-            try {
-                final DatagramPacket request = PacketUtils.newEmptyPacket(socket.getReceiveBufferSize());
+        final DatagramPacket request = PacketUtils.newEmptyPacket(receiveBufferSize);
+        try {
+            while (!socket.isClosed() && !Thread.interrupted()) {
                 socket.receive(request);
                 final String requestMessage = PacketUtils.decodeMessage(request);
+                final SocketAddress address = request.getSocketAddress();
                 log(String.format("Received '%s'", requestMessage));
                 workers.submit(() -> {
                     String responseMessage = "Hello, " + requestMessage;
+                    final DatagramPacket response = PacketUtils.makeMessagePacket(address, responseMessage);
                     log(String.format("Sending '%s'", responseMessage));
-                    final DatagramPacket response = PacketUtils.makeMessagePacket(
-                            request.getSocketAddress(), responseMessage);
                     try {
                         socket.send(response);
                     } catch (IOException e) {
@@ -86,10 +85,10 @@ public class HelloUDPServer implements HelloServer {
                         }
                     }
                 });
-            } catch (IOException e) {
-                if (!socket.isClosed()) {
-                    System.err.println("Error occured while trying to receive a request: " + e.getMessage());
-                }
+            }
+        } catch (IOException e) {
+            if (!socket.isClosed()) {
+                System.err.println("Error occured while trying to receive a request: " + e.getMessage());
             }
         }
     }
@@ -97,10 +96,10 @@ public class HelloUDPServer implements HelloServer {
     @Override
     public void close() {
         socket.close();
-        singleExecutor.shutdown();
+        mainExecutor.shutdown();
         workers.shutdown();
         try {
-            singleExecutor.awaitTermination(TERMINATION_AWAIT_SECONDS, TimeUnit.SECONDS);
+            mainExecutor.awaitTermination(TERMINATION_AWAIT_SECONDS, TimeUnit.SECONDS);
             workers.awaitTermination(TERMINATION_AWAIT_SECONDS, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             System.err.println("Could not terminate executor pools: " + e.getMessage());

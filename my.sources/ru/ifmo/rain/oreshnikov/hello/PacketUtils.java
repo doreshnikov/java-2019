@@ -1,6 +1,7 @@
 package ru.ifmo.rain.oreshnikov.hello;
 
 import java.net.DatagramPacket;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 
@@ -23,8 +24,21 @@ public class PacketUtils {
         return new DatagramPacket(messageBytes, messageBytes.length, address);
     }
 
+    @Deprecated
+    public static SocketAddress getUnresolvedSocketAddress(DatagramPacket packet) {
+        return InetSocketAddress.createUnresolved(String.valueOf(packet.getAddress()), packet.getPort());
+    }
+
+    public static void fillMessage(DatagramPacket packet, String message) {
+        packet.setData(message.getBytes(StandardCharsets.UTF_8));
+    }
+
     public static DatagramPacket newEmptyPacket(int receiveBufferSize) {
         return new DatagramPacket(new byte[receiveBufferSize], receiveBufferSize);
+    }
+
+    public static DatagramPacket newEmptyPacket(final SocketAddress address, int receiveBufferSize) {
+        return new DatagramPacket(new byte[receiveBufferSize], receiveBufferSize, address);
     }
 
     public static boolean checkValidResponse(String requestMessage, String responseMessage) {
